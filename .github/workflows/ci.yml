@@ -138,7 +138,7 @@ jobs:
 
       - name: Smoke test container
         run: |
-          docker run -d --name spell-ci -p 8080:80 spell:ci-${{ github.sha }}
+          docker run -d --name spell-ci -p 8080:3000 spell:ci-${{ github.sha }}
           sleep 3
           curl -f http://localhost:8080 || exit 1
           docker stop spell-ci
