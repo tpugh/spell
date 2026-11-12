@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import HomeView from './HomeView'
 import WordListManager from './WordListManager'
 import PracticeView from './PracticeView'
@@ -27,6 +27,20 @@ export default function App() {
   const selectedList = selectedListId
     ? (lists.find((l) => l.id === selectedListId) ?? null)
     : null
+
+  // Move focus to the new screen after navigation so keyboard and screen
+  // reader users land at the top of the updated content. Skipped on the
+  // first render so the skip link stays the first tab stop.
+  const hasNavigated = useRef(false)
+
+  useEffect(() => {
+    if (loading) return
+    if (!hasNavigated.current) {
+      hasNavigated.current = true
+      return
+    }
+    document.getElementById('main-content')?.focus()
+  }, [view, loading])
 
   function navigate(next: View) {
     if ((next === 'practice' || next === 'test') && selectedList) {
@@ -114,7 +128,7 @@ export default function App() {
       )}
 
       {view === 'backup' && (
-        <BackupView onNavigate={setView} onRestored={() => void refresh()} />
+        <BackupView onNavigate={setView} onRestored={() => void refresh({ silent: true })} />
       )}
     </>
   )

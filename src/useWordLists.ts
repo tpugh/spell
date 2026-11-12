@@ -28,8 +28,10 @@ export function useWordLists() {
   const [lists, setLists] = useState<WordList[]>([])
   const [loading, setLoading] = useState(true)
 
-  const refresh = useCallback(async () => {
-    setLoading(true)
+  // silent keeps the current screen mounted instead of flashing the loading
+  // screen. Backup restore uses it so the confirmation message stays visible.
+  const refresh = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setLoading(true)
     const data = await storage.getWordLists()
     setLists(data)
     setLoading(false)
