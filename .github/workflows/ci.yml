@@ -114,7 +114,41 @@ jobs:
           retention-days: 7
 
   # ---------------------------------------------------------------------------
-  # 5. Docker image build (validates the containerized app)
+  # 5. Chrome extension (Manifest V3) package
+  #    The same app + src modules as the web build, swapped to chrome.storage.
+  # ---------------------------------------------------------------------------
+  extension-build:
+    name: Chrome Extension Build
+    runs-on: ubuntu-latest
+    container:
+      image: node:22-alpine
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build extension
+        run: npm run build:extension
+
+      - name: Verify package
+        run: |
+          test -f dist-extension/manifest.json
+          test -f dist-extension/background.js
+          test -f dist-extension/extension.html
+          test -f dist-extension/icons/icon-128.png
+          grep -q '"storage"' dist-extension/manifest.json
+
+      - name: Upload extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spell-extension
+          path: dist-extension/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # 6. Docker image build (validates the containerized app)
   # ---------------------------------------------------------------------------
   docker-build:
     name: Docker Build

@@ -2,14 +2,14 @@
 
 Spelling practice app for young learners (~6 years old).
 
-**Live app:** https://tpugh.github.io/spell/
+**Live app:** https://tpugh.github.io/spell/ · **Chrome extension:** `spell-chrome-extension.zip` on the [v0.0.1 release](https://github.com/tpugh/spell/releases/tag/v0.0.1)
 
 ## Tech stack (MVP)
 
 - **Framework:** React 19 + Vite
 - **Language:** TypeScript (strict)
 - **Styling:** Tailwind CSS v4
-- **Storage:** Dexie.js (IndexedDB) behind a storage adapter
+- **Storage:** Dexie.js (IndexedDB) on the web, `chrome.storage.local` in the extension — both behind the `StorageAdapter` interface
 - **Audio:** Web Speech API (text-to-speech)
 - **Testing:** Vitest (unit/component) + Playwright (E2E)
 - **Hosting:** GitHub Pages (static SPA)
@@ -21,7 +21,7 @@ Spelling practice app for young learners (~6 years old).
 - **Practice Mode** — Listen to a word (TTS), type it, get instant feedback, retry missed words
 - **Test Mode** — Take a spelling test with audio prompts, type answers, submit for scoring
 - **Results Screen** — Score, stars, missed words list, retry options
-- **Local-first** — All data stored in browser (IndexedDB), no account required
+- **Local-first** — All data stored in browser, no account required
 - **Kid-friendly UI** — Large tap targets, minimal text, encouraging feedback, audio-first
 
 ## Accessibility
@@ -53,6 +53,7 @@ npm run preview   # preview production build
 | `npm run dev` | Start dev server |
 | `npm run build` | Typecheck + production build |
 | `npm run postbuild` | Copies `dist/index.html` → `dist/404.html` (SPA fallback), runs automatically after `build` |
+| `npm run build:extension` | Builds the Manifest V3 extension → `dist-extension/` |
 | `npm run preview` | Preview production build |
 | `npm run typecheck` | TypeScript type checking |
 | `npm run lint` | Biome lint |
@@ -60,6 +61,35 @@ npm run preview   # preview production build
 | `npm run test:unit` | Run Vitest unit tests |
 | `npm run test:e2e` | Run Playwright E2E tests |
 | `npm run test:e2e:ui` | Playwright UI mode |
+
+## Chrome extension
+
+The extension is **the same React app and the same `src/` modules** as the web build — no fork. The
+only difference is storage: `src/storage/configure.ts` detects `chrome.storage.local` at startup and
+swaps the IndexedDB adapter for the chrome adapter from `src/storage/chromeStorage.ts`.
+
+```bash
+npm run build:extension
+# then: chrome://extensions → Developer mode → Load unpacked → dist-extension/
+```
+
+- **Manifest V3**, single `storage` permission, no host permissions, no remote code
+- Toolbar button opens the app in a tab (reuses the open tab via `chrome.storage.session`) — a
+  dedicated tab rather than a popup or side panel, because the app needs full-size tap targets and
+  audio prompts
+- `extension.html` at the repo root is the extension entry point; `vite.extension.config.ts` builds
+  it with relative asset paths and without the PWA plugin
+- `scripts/build-extension.mjs` copies the manifest (injecting the version from `package.json`),
+  the background worker, and the icons into `dist-extension/`
+- Keyboard, screen reader, and easy-read support are inherited from the web app
+
+**Install from a release:** download `spell-chrome-extension.zip` from the
+[v0.0.1 release](https://github.com/tpugh/spell/releases/tag/v0.0.1), unzip it, and load the folder
+from `chrome://extensions`.
+
+Store submission copy, permission justifications, and the screenshot checklist live in
+[`docs/chrome-web-store/listing.md`](docs/chrome-web-store/listing.md). The privacy policy is
+published at https://tpugh.github.io/spell/privacy.html.
 
 ## Deployment
 
@@ -73,6 +103,12 @@ The app is a static SPA, so GitHub Pages serves it directly.
 - Enable once in **Settings → Pages → Source: GitHub Actions**
 
 Live URL: https://tpugh.github.io/spell/
+
+### Chrome extension release
+
+`.github/workflows/release-extension.yml` (manual dispatch) builds the extension, zips
+`dist-extension/` and attaches `spell-chrome-extension.zip` to an existing release tag
+(default `v0.0.1`). Run it from **Actions → Release Chrome extension → Run workflow**.
 
 ### Docker / self-host
 
@@ -96,7 +132,8 @@ for the full plan (backend needs, Pages vs Workers, migration steps).
 2. **Unit Tests** — `node:22-alpine` (Vitest + coverage)
 3. **Build** — `node:22-alpine` (Vite production build)
 4. **E2E Tests** — `mcr.microsoft.com/playwright` (Chromium)
-5. **Docker Build** — multi-stage build + container smoke test
+5. **Chrome Extension Build** — `node:22-alpine` (MV3 package + manifest checks)
+6. **Docker Build** — multi-stage build + container smoke test
 
 `.github/workflows/deploy.yml` builds and pushes the container image to GitHub Container Registry (GHCR).
 
@@ -104,16 +141,25 @@ for the full plan (backend needs, Pages vs Workers, migration steps).
 
 ```
 spell/
-├── .github/workflows/   # CI, Pages, Deploy pipelines
-├── public/              # Static assets (PWA icons)
+├── .github/workflows/   # CI, Pages, Deploy, Release extension
+├── public/              # Static assets (PWA icons, privacy.html)
 ├── scripts/
-│   └── spa-fallback.mjs # dist/index.html -> dist/404.html
+│   ├── spa-fallback.mjs # dist/index.html -> dist/404.html
+│   └── build-extension.mjs  # manifest + background + icons -> dist-extension/
+├── extension/
+│   ├── manifest.json    # Manifest V3, storage permission only
+│   ├── background.js    # toolbar button -> app tab
+│   └── icons/           # 16 / 32 / 48 / 128 px
+├── extension.html       # Extension entry point (same app as index.html)
 ├── src/
 │   ├── App.tsx          # Root component (view routing, skip link, focus)
 │   ├── main.tsx         # Entry point
 │   ├── index.css        # Tailwind, focus/reduced-motion/easy-read styles
 │   ├── types.ts         # Domain types
-│   ├── db.ts            # Dexie (IndexedDB) + storage adapter
+│   ├── db.ts            # Dexie + StorageAdapter interface + adapter swap
+│   ├── storage/
+│   │   ├── chromeStorage.ts  # chrome.storage.local adapter
+│   │   └── configure.ts      # picks the adapter at startup
 │   ├── useWordLists.ts  # Word list CRUD hook
 │   ├── useFontMode.ts   # Easy-read font toggle (persisted)
 │   ├── HomeView.tsx     # Home screen
@@ -127,8 +173,10 @@ spell/
 │   ├── test/setup.ts    # Test setup
 │   └── App.test.tsx     # Unit tests
 ├── e2e/                 # Playwright E2E tests (incl. a11y.spec.ts)
+├── docs/chrome-web-store/listing.md  # Store listing + submission checklist
 ├── Dockerfile           # Multi-stage container build (serve runtime)
 ├── vite.config.ts       # Vite + PWA + Tailwind (+ Pages base path)
+├── vite.extension.config.ts  # Extension build (relative base, no PWA)
 ├── vitest.config.ts     # Unit test config
 ├── playwright.config.ts # E2E config
 ├── tsconfig.json        # TypeScript config

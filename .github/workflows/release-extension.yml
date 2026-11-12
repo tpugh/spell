@@ -1,0 +1,52 @@
+name: Release Chrome extension
+
+# Attaches a packaged extension zip to an existing GitHub release/tag.
+# Run it from Actions -> "Release Chrome extension" -> Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to attach the extension to
+        required: true
+        default: v0.0.1
+
+permissions:
+  contents: write
+
+jobs:
+  package-and-upload:
+    name: Package and upload extension
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build extension
+        run: npm run build:extension
+
+      - name: Zip extension
+        run: |
+          cd dist-extension
+          zip -r ../spell-chrome-extension.zip .
+          cd ..
+          unzip -l spell-chrome-extension.zip
+
+      - name: Attach zip to the existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh release upload "$TAG" spell-chrome-extension.zip --clobber --repo "$GITHUB_REPOSITORY"
+
+      - name: Show release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[] | "\(.name) \(.size) bytes"'

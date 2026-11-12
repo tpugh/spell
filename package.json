@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "postbuild": "node scripts/spa-fallback.mjs",
+    "build:extension": "vite build --config vite.extension.config.ts && node scripts/build-extension.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "biome lint .",

@@ -104,5 +104,18 @@ export const dexieAdapter: StorageAdapter = {
   },
 }
 
-// Default adapter (can be swapped for chrome.storage in extension build)
-export const storage: StorageAdapter = dexieAdapter
+// Default adapter: IndexedDB. The Chrome extension swaps it for
+// chrome.storage.local at startup via setStorageAdapter().
+let activeAdapter: StorageAdapter = dexieAdapter
+
+export function setStorageAdapter(adapter: StorageAdapter): void {
+  activeAdapter = adapter
+}
+
+export const storage: StorageAdapter = {
+  getWordLists: () => activeAdapter.getWordLists(),
+  saveWordList: (list) => activeAdapter.saveWordList(list),
+  deleteWordList: (id) => activeAdapter.deleteWordList(id),
+  getTestResults: () => activeAdapter.getTestResults(),
+  saveTestResult: (result) => activeAdapter.saveTestResult(result),
+}
