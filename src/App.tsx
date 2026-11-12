@@ -53,7 +53,7 @@ export default function App() {
       {view === 'lists' && (
         <WordListManager
           lists={lists}
-          onSave={save}
+          onSave={async (list) => { await save(list) }}
           onDelete={remove}
           onNavigate={setView}
         />
