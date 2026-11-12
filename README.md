@@ -7,12 +7,11 @@ Spelling practice app for young learners (~6 years old).
 - **Framework:** React 19 + Vite
 - **Language:** TypeScript (strict)
 - **Styling:** Tailwind CSS v4
-- **State:** React state + Zustand-ready
 - **Storage:** Dexie.js (IndexedDB) behind a storage adapter
 - **Audio:** Web Speech API (text-to-speech)
 - **Testing:** Vitest (unit/component) + Playwright (E2E)
-- **Deploy:** Cloudflare Pages (via GitHub Actions)
-- **Container:** Multi-stage Docker (Node 22 Alpine → nginx 1.27 Alpine)
+- **Deploy:** Cloudflare Pages (optional, via GitHub Actions)
+- **Container:** Multi-stage Docker (Node 22 Alpine build → `serve` runtime)
 
 ## Features (MVP)
 
@@ -26,7 +25,7 @@ Spelling practice app for young learners (~6 years old).
 ## Getting started
 
 ```bash
-npm ci
+npm install
 npm run dev       # http://localhost:5173
 npm run build     # production build → dist/
 npm run preview   # preview production build
@@ -40,7 +39,7 @@ npm run preview   # preview production build
 | `npm run build` | Typecheck + production build |
 | `npm run preview` | Preview production build |
 | `npm run typecheck` | TypeScript type checking |
-| `npm run lint` | Biome lint + format check |
+| `npm run lint` | Biome lint |
 | `npm run lint:fix` | Auto-fix lint/format issues |
 | `npm run test:unit` | Run Vitest unit tests |
 | `npm run test:e2e` | Run Playwright E2E tests |
@@ -55,17 +54,19 @@ The pipeline lives in `.github/workflows/` and leverages containers:
 2. **Unit Tests** — `node:22-alpine` container (Vitest + coverage)
 3. **Build** — `node:22-alpine` container (Vite production build)
 4. **E2E Tests** — `mcr.microsoft.com/playwright` container (Chromium)
-5. **Docker Build** — multi-stage build + container smoke test (nginx)
+5. **Docker Build** — multi-stage build + container smoke test
 
 ### Deploy (`deploy.yml`) — runs on push to `main`
 1. **Build & Push** — Docker image → GitHub Container Registry (GHCR)
-2. **Deploy Web** — Cloudflare Pages via wrangler
+2. **Deploy Web** — Cloudflare Pages (skipped automatically until `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` secrets are set)
 
 ### Docker (local)
 
+The image is served by [`serve`](https://www.npmjs.com/package/serve) — no nginx required.
+
 ```bash
 docker build -t spell .
-docker run -p 8080:80 spell
+docker run -p 8080:3000 spell
 # open http://localhost:8080
 ```
 
@@ -91,9 +92,9 @@ spell/
 │   ├── test/setup.ts    # Test setup
 │   └── App.test.tsx     # Unit tests
 ├── e2e/                 # Playwright E2E tests
-├── Dockerfile           # Multi-stage container build
-├── nginx.conf           # SPA nginx config
+├── Dockerfile           # Multi-stage container build (serve runtime)
 ├── vite.config.ts       # Vite + PWA + Tailwind
+├── vitest.config.ts     # Unit test config
 ├── playwright.config.ts # E2E config
 ├── tsconfig.json        # TypeScript config
 └── biome.json           # Lint/format config
