@@ -1,18 +1,27 @@
 # Spell
 
-Spelling practice app for young learners (target: ~6 years old).
+Spelling practice app for young learners (~6 years old).
 
 ## Tech stack (MVP)
 
 - **Framework:** React 19 + Vite
 - **Language:** TypeScript (strict)
 - **Styling:** Tailwind CSS v4
-- **State:** Zustand
-- **Storage:** Dexie.js (IndexedDB) behind a thin adapter
-- **Audio:** Web Speech API
+- **State:** React state + Zustand-ready
+- **Storage:** Dexie.js (IndexedDB) behind a storage adapter
+- **Audio:** Web Speech API (text-to-speech)
 - **Testing:** Vitest (unit/component) + Playwright (E2E)
-- **Deploy:** Vercel or Cloudflare Pages
-- **Container:** Multi-stage Docker (Node build → nginx)
+- **Deploy:** Cloudflare Pages (via GitHub Actions)
+- **Container:** Multi-stage Docker (Node 22 Alpine → nginx 1.27 Alpine)
+
+## Features (MVP)
+
+- **Word List Management** — Create, edit, and delete spelling word lists
+- **Practice Mode** — Listen to a word (TTS), type it, get instant feedback, retry missed words
+- **Test Mode** — Take a spelling test with audio prompts, type answers, submit for scoring
+- **Results Screen** — Score, stars, missed words list, retry options
+- **Local-first** — All data stored in browser (IndexedDB), no account required
+- **Kid-friendly UI** — Large tap targets, minimal text, encouraging feedback, audio-first
 
 ## Getting started
 
@@ -46,11 +55,11 @@ The pipeline lives in `.github/workflows/` and leverages containers:
 2. **Unit Tests** — `node:22-alpine` container (Vitest + coverage)
 3. **Build** — `node:22-alpine` container (Vite production build)
 4. **E2E Tests** — `mcr.microsoft.com/playwright` container (Chromium)
-5. **Docker Build** — multi-stage build + smoke test (nginx container)
+5. **Docker Build** — multi-stage build + container smoke test (nginx)
 
 ### Deploy (`deploy.yml`) — runs on push to `main`
 1. **Build & Push** — Docker image → GitHub Container Registry (GHCR)
-2. **Deploy Web** — Cloudflare Pages
+2. **Deploy Web** — Cloudflare Pages via wrangler
 
 ### Docker (local)
 
@@ -66,9 +75,19 @@ docker run -p 8080:80 spell
 spell/
 ├── .github/workflows/   # CI/CD pipelines (containerized)
 ├── src/
-│   ├── App.tsx          # Root component
+│   ├── App.tsx          # Root component (view routing)
 │   ├── main.tsx         # Entry point
 │   ├── index.css        # Tailwind imports
+│   ├── types.ts         # Domain types
+│   ├── db.ts            # Dexie (IndexedDB) + storage adapter
+│   ├── useWordLists.ts  # Word list CRUD hook
+│   ├── HomeView.tsx     # Home screen
+│   ├── WordListManager.tsx  # Create/edit/delete word lists
+│   ├── PracticeView.tsx # Practice mode (TTS + feedback)
+│   ├── TestView.tsx     # Test mode (scored)
+│   ├── ResultsView.tsx  # Results + missed words
+│   ├── hooks/
+│   │   └── useTTS.ts    # Web Speech API hook
 │   ├── test/setup.ts    # Test setup
 │   └── App.test.tsx     # Unit tests
 ├── e2e/                 # Playwright E2E tests
