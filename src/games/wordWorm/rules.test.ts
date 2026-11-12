@@ -105,8 +105,10 @@ describe('placeLetters', () => {
       expect(letter.x).toBeLessThan(WORM_COLUMNS)
       expect(letter.y).toBeGreaterThanOrEqual(0)
       expect(letter.y).toBeLessThan(WORM_ROWS)
-      expect(Math.abs(letter.x - WORM_START_X)).toBeGreaterThan(2)
-      expect(Math.abs(letter.y - WORM_START_Y)).toBeGreaterThan(2)
+      // The 5x5 centre stays clear so the worm always starts with a choice.
+      const insideCentre =
+        Math.abs(letter.x - WORM_START_X) <= 2 && Math.abs(letter.y - WORM_START_Y) <= 2
+      expect(insideCentre).toBe(false)
     }
   })
 

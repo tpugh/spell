@@ -108,7 +108,7 @@ async function walkTo(page: Page, targetX: number, targetY: number) {
 
   const blocked = new Set(
     await page
-      .locator('[data-correct="false"]')
+      .locator('[data-letter]')
       .evaluateAll((cells) => cells.map((cell) => cell.getAttribute('data-cell') ?? '')),
   )
   blocked.delete(`${targetX},${targetY}`)
@@ -123,8 +123,9 @@ async function walkTo(page: Page, targetX: number, targetY: number) {
 }
 
 async function eatTarget(page: Page, selector: string) {
-  const target = page.locator(selector)
-  await expect(target).toHaveCount(1)
+  // Distractors come in pairs, so take the first match rather than requiring one.
+  const target = page.locator(selector).first()
+  await expect(target).toBeVisible()
   const cell = await target.getAttribute('data-cell')
   if (!cell) throw new Error('letter cell is missing its coordinates')
   const [x, y] = cell.split(',').map(Number)
