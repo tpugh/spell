@@ -4,6 +4,10 @@ test.describe('accessibility', () => {
   test('skip link is the first tab stop and moves focus to main content', async ({ page }) => {
     await page.goto('/')
 
+    // The skip link is rendered once the app finishes loading, so wait for the
+    // home screen before testing the very first Tab.
+    await expect(page.getByRole('heading', { name: 'Spell' })).toBeVisible()
+
     await page.keyboard.press('Tab')
     const skipLink = page.getByRole('link', { name: /skip to main content/i })
     await expect(skipLink).toBeFocused()
