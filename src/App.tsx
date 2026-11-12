@@ -5,6 +5,8 @@ import PracticeView from './PracticeView'
 import TestView from './TestView'
 import ResultsView from './ResultsView'
 import BackupView from './BackupView'
+import GamesView from './GamesView'
+import WordWormView from './WordWormView'
 import { useWordLists } from './useWordLists'
 import { useProgress } from './useProgress'
 import type { WordList, View, TestResult } from './types'
@@ -15,12 +17,14 @@ const VIEW_LABELS: Record<View, string> = {
   practice: 'Practice mode',
   test: 'Test mode',
   results: 'Test results',
+  games: 'Games',
+  'word-worm': 'Word Worm game',
   backup: 'Back up and restore',
 }
 
 export default function App() {
   const { lists, loading, save, remove, refresh } = useWordLists()
-  const { progress, loading: progressLoading, earnStars } = useProgress()
+  const { progress, loading: progressLoading, earnStars, earnGameStars } = useProgress()
   const [view, setView] = useState<View>('home')
   const [selectedListId, setSelectedListId] = useState<string | null>(null)
   const [activeList, setActiveList] = useState<WordList | null>(null)
@@ -46,7 +50,7 @@ export default function App() {
   }, [view, loading, progressLoading])
 
   function navigate(next: View) {
-    if ((next === 'practice' || next === 'test') && selectedList) {
+    if ((next === 'practice' || next === 'test' || next === 'word-worm') && selectedList) {
       setActiveList(selectedList)
     }
     setView(next)
@@ -112,6 +116,24 @@ export default function App() {
             setLastStars(starsEarned)
             setView('results')
           }}
+        />
+      )}
+
+      {view === 'games' && (
+        <GamesView
+          lists={lists}
+          selectedList={selectedList}
+          onSelectList={(list) => setSelectedListId(list.id)}
+          onPlay={() => navigate('word-worm')}
+          onNavigate={navigate}
+        />
+      )}
+
+      {view === 'word-worm' && activeList && (
+        <WordWormView
+          wordList={activeList}
+          onExit={() => setView('games')}
+          onEarnStars={earnGameStars}
         />
       )}
 

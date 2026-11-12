@@ -23,6 +23,7 @@ Spelling practice app for young learners (~6 years old).
 - **Results Screen** — Score, stars, missed words list, retry options
 - **Stars & streaks** — Every finished session earns stars; consecutive practice days build a streak, with no penalties for mistakes
 - **Word of the day** — One word picked from the saved lists each day, with a play button
+- **Games** — An arcade section with **Word Worm**: steer a pixel worm to the letters of a word in order, using any saved word list
 - **Backup & restore** — Grown-ups can export a JSON backup and restore it on another browser or in the extension
 - **Local-first** — All data stored in browser, no account required
 - **Kid-friendly UI** — Large tap targets, minimal text, encouraging feedback, audio-first
@@ -74,6 +75,43 @@ Gamification is local-only and deliberately low-pressure (issue #4). Rules live 
 - **Coverage** — `src/progress.test.ts` (star rules, streak boundaries, word-of-the-day determinism),
   `src/storage/chromeStorage.test.ts` (adapter round-trip) and `e2e/gamification.spec.ts` (stars,
   streak, mistake handling, perfect-score celebration).
+
+## Games (arcade)
+
+The home screen has a **Games** button. The games screen has a labelled word-list chooser, so a
+grown-up can pick which list a round uses; the choice is the same app-wide list used by practice and
+tests, so the screens never disagree. No list means no Play — with a button straight to the list
+editor instead of a dead end.
+
+**Word Worm** is the first game (issue #11). A word is spoken and only its length is shown as
+blanks. The child steers a pixel worm around a 15 × 11 grid to eat the next letter, in order; each
+correct letter fills a blank and grows the worm. Wrong letters are chosen from the letters children
+mix up (`b/d/p/q`, `m/n`, `a/e`, `c/k`, …), so the choice is the learning.
+
+Design rules for every game:
+
+- **No fail state** — a wrong letter bonks, repeats the word and costs nothing. There is no timer,
+  no lives and no score to lose. Motor slips can never cost a word.
+- **Audio-only prompt** — the word is never rendered on screen, and the completion summary is the
+  only place a full word appears (as the review list).
+- **Gentle hints** — after two wrong letters the correct cell pulses and the word repeats; after
+  four, the letter name is spoken too. Hints are never printed, so the spelling stays unreadable.
+- **Step-based movement** — the worm moves one cell per arrow/WASD press or d-pad tap, not on a
+  timer. It is fully playable with the keyboard alone, and tapping a cell next to the head works for
+  pointer users.
+- **Reduced motion** — the pulse becomes a static outline, and there is no flashing or screen shake.
+- **Stars** — a finished round earns 1 star, or 2 for a clean round, capped at
+  `GAME_STAR_DAILY_CAP` (3) per local day so games cannot out-earn practice and tests. A finished
+  round still counts as a practice day for the streak.
+- **Sound** — short square-wave blips from the Web Audio API (no audio assets), behind a remembered
+  sound toggle and kept quiet enough not to talk over the prompt.
+
+Rounds are up to five words, with words missed in the previous round tried first. Sessions are
+stored as `GameSession` records (`StorageAdapter.getGameSessions()` / `saveGameSession()`), device-only
+and excluded from the v1 backup file like stars and streaks.
+
+Game logic is split into pure modules (`src/games/wordWorm/rules.ts` and `engine.ts`) and covered by
+`rules.test.ts`, `engine.test.ts` and `e2e/word-worm.spec.ts`.
 
 ## Getting started
 
@@ -198,6 +236,16 @@ spell/
 │   ├── progress.ts      # Star/streak rules + word of the day (pure functions)
 │   ├── useProgress.ts   # Loads and saves stars/streak for this device
 │   ├── BackupView.tsx   # Parent backup/restore screen
+│   ├── GamesView.tsx    # Arcade games list + word-list chooser
+│   ├── WordWormView.tsx # Word Worm game screen
+│   ├── arcade/
+│   │   ├── blip.ts      # Web Audio 8-bit sound effects
+│   │   └── useSound.ts  # Remembered sound on/off
+│   ├── games/wordWorm/
+│   │   ├── rules.ts     # Grid, distractors, round selection (pure)
+│   │   └── engine.ts    # Worm reducer (pure)
+│   ├── components/
+│   │   └── WordListSelect.tsx  # Shared list chooser (home + games)
 │   ├── storage/
 │   │   ├── backup.ts         # JSON backup format, validation, restore
 │   │   ├── chromeStorage.ts  # chrome.storage.local adapter
@@ -214,7 +262,7 @@ spell/
 │   │   └── useTTS.ts    # Web Speech API hook
 │   ├── test/setup.ts    # Test setup
 │   └── App.test.tsx     # Unit tests
-├── e2e/                 # Playwright E2E tests (a11y, backup, gamification)
+├── e2e/                 # Playwright E2E tests (a11y, backup, gamification, word worm)
 ├── docs/chrome-web-store/listing.md  # Store listing + submission checklist
 ├── Dockerfile           # Multi-stage container build (serve runtime)
 ├── vite.config.ts       # Vite + PWA + Tailwind (+ Pages base path)

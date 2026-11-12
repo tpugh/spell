@@ -33,6 +33,24 @@ export interface Progress {
   /** Local calendar day of the last finished session, e.g. "2026-11-12". */
   lastPracticeDay: string | null
   totalSessions: number
+  /** Stars earned from arcade games today, used for the daily game cap. */
+  gameStars: number
+  /** Local calendar day `gameStars` belongs to, or null when never played. */
+  gameStarsDay: string | null
+}
+
+export type GameId = 'word-worm'
+
+/** A finished arcade round. Device-local, like stars and streaks. */
+export interface GameSession {
+  id: string
+  gameId: GameId
+  wordListId: string
+  wordListName: string
+  date: number
+  wordsCompleted: number
+  wordsAttempted: number
+  missedWords: string[]
 }
 
 export type View =
@@ -41,6 +59,8 @@ export type View =
   | 'practice'
   | 'test'
   | 'results'
+  | 'games'
+  | 'word-worm'
   | 'backup'
 
 export interface PracticeState {

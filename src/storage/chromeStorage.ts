@@ -1,6 +1,6 @@
 import type { StorageAdapter } from '../db'
-import { EMPTY_PROGRESS } from '../progress'
-import type { Progress, TestResult, WordList } from '../types'
+import { normalizeProgress } from '../progress'
+import type { GameSession, Progress, TestResult, WordList } from '../types'
 
 /**
  * The subset of chrome.storage.local this app needs.
@@ -19,9 +19,14 @@ interface ChromeLike {
 
 export const WORD_LISTS_KEY = 'spell:wordLists'
 export const TEST_RESULTS_KEY = 'spell:testResults'
+export const GAME_SESSIONS_KEY = 'spell:gameSessions'
 export const PROGRESS_KEY = 'spell:progress'
 
-function isProgress(value: unknown): value is Progress {
+/**
+ * Older versions only wrote the core fields, so only those are required.
+ * `normalizeProgress` fills in the game counters.
+ */
+function isProgress(value: unknown): value is Partial<Progress> {
   if (typeof value !== 'object' || value === null) return false
   const progress = value as Record<string, unknown>
   return (
@@ -30,6 +35,18 @@ function isProgress(value: unknown): value is Progress {
     typeof progress.bestStreak === 'number' &&
     typeof progress.totalSessions === 'number' &&
     (progress.lastPracticeDay === null || typeof progress.lastPracticeDay === 'string')
+  )
+}
+
+function isGameSession(value: unknown): value is GameSession {
+  if (typeof value !== 'object' || value === null) return false
+  const session = value as Record<string, unknown>
+  return (
+    typeof session.id === 'string' &&
+    typeof session.gameId === 'string' &&
+    typeof session.wordListId === 'string' &&
+    typeof session.date === 'number' &&
+    Array.isArray(session.missedWords)
   )
 }
 
@@ -80,14 +97,26 @@ export function createChromeStorageAdapter(area: ChromeStorageArea): StorageAdap
       await area.set({ [TEST_RESULTS_KEY]: next })
     },
 
+    async getGameSessions() {
+      const sessions = await readArray<GameSession>(area, GAME_SESSIONS_KEY)
+      return sessions.filter(isGameSession).sort((a, b) => b.date - a.date)
+    },
+
+    async saveGameSession(session) {
+      const sessions = await readArray<GameSession>(area, GAME_SESSIONS_KEY)
+      const next = sessions.filter((item) => item.id !== session.id)
+      next.push(session)
+      await area.set({ [GAME_SESSIONS_KEY]: next })
+    },
+
     async clearAll() {
-      await area.set({ [WORD_LISTS_KEY]: [], [TEST_RESULTS_KEY]: [] })
+      await area.set({ [WORD_LISTS_KEY]: [], [TEST_RESULTS_KEY]: [], [GAME_SESSIONS_KEY]: [] })
     },
 
     async getProgress() {
       const stored = await area.get(PROGRESS_KEY)
       const value = stored[PROGRESS_KEY]
-      return isProgress(value) ? value : EMPTY_PROGRESS
+      return isProgress(value) ? normalizeProgress(value) : normalizeProgress({})
     },
 
     async saveProgress(progress) {

@@ -1,4 +1,5 @@
 import type { Progress, WordList, View } from './types'
+import WordListSelect from './components/WordListSelect'
 import { useFontMode } from './useFontMode'
 import { useTTS } from './hooks/useTTS'
 import { wordOfTheDay } from './progress'
@@ -99,36 +100,14 @@ export default function HomeView({
           </section>
         )}
 
-        <div className="mb-5 w-full rounded-2xl bg-white p-5 shadow-md">
-          <label
-            htmlFor="word-list-select"
-            className="mb-2 block text-sm font-semibold text-gray-700"
-          >
-            Your word list
-          </label>
-          {lists.length === 0 ? (
-            <p className="text-gray-700">No lists yet. Create one!</p>
-          ) : (
-            <select
-              id="word-list-select"
-              className="w-full rounded-xl border-2 border-indigo-400 bg-indigo-50 px-4 py-3 text-lg font-medium text-indigo-900"
-              value={selectedList?.id ?? ''}
-              onChange={(event) => {
-                const list = lists.find((candidate) => candidate.id === event.target.value)
-                if (list) onSelectList(list)
-              }}
-            >
-              <option value="" disabled>
-                Choose a list...
-              </option>
-              {lists.map((list) => (
-                <option key={list.id} value={list.id}>
-                  {list.name} ({list.words.length} words)
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
+        <WordListSelect
+          id="word-list-select"
+          label="Your word list"
+          lists={lists}
+          selectedList={selectedList}
+          onSelectList={onSelectList}
+          emptyMessage="No lists yet. Create one!"
+        />
 
         <div className="flex w-full flex-col gap-3">
           <button
@@ -146,6 +125,13 @@ export default function HomeView({
             onClick={() => onNavigate('test')}
           >
             Take a Test
+          </button>
+          <button
+            type="button"
+            className="min-h-14 rounded-2xl bg-orange-700 px-8 py-4 text-xl font-semibold text-white shadow-md transition hover:bg-orange-800 active:scale-95"
+            onClick={() => onNavigate('games')}
+          >
+            <span aria-hidden="true">🎮 </span>Games
           </button>
           <button
             type="button"

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  GAME_SESSIONS_KEY,
   PROGRESS_KEY,
   TEST_RESULTS_KEY,
   WORD_LISTS_KEY,
@@ -7,7 +8,7 @@ import {
   type ChromeStorageArea,
 } from './chromeStorage'
 import { EMPTY_PROGRESS } from '../progress'
-import type { TestResult, WordList } from '../types'
+import type { GameSession, TestResult, WordList } from '../types'
 
 function createFakeArea(initial: Record<string, unknown> = {}): ChromeStorageArea & {
   data: Record<string, unknown>
@@ -131,6 +132,8 @@ describe('chrome.storage adapter', () => {
       bestStreak: 4,
       lastPracticeDay: '2026-11-12',
       totalSessions: 5,
+      gameStars: 2,
+      gameStarsDay: '2026-11-12',
     }
     await adapter.saveProgress(progress)
 
@@ -141,9 +144,79 @@ describe('chrome.storage adapter', () => {
     await expect(adapter.getProgress()).resolves.toEqual(progress)
   })
 
+  it('fills in game fields for progress saved by an older version', async () => {
+    const area = createFakeArea({
+      [PROGRESS_KEY]: {
+        stars: 4,
+        streakDays: 2,
+        bestStreak: 3,
+        lastPracticeDay: '2026-11-10',
+        totalSessions: 5,
+      },
+    })
+    const adapter = createChromeStorageAdapter(area)
+
+    await expect(adapter.getProgress()).resolves.toEqual({
+      stars: 4,
+      streakDays: 2,
+      bestStreak: 3,
+      lastPracticeDay: '2026-11-10',
+      totalSessions: 5,
+      gameStars: 0,
+      gameStarsDay: null,
+    })
+  })
+
   it('falls back to empty progress when the stored value is malformed', async () => {
     const area = createFakeArea({ [PROGRESS_KEY]: { stars: 'lots' } })
     const adapter = createChromeStorageAdapter(area)
     await expect(adapter.getProgress()).resolves.toEqual(EMPTY_PROGRESS)
+  })
+
+  it('stores game sessions newest first and drops malformed entries', async () => {
+    const area = createFakeArea()
+    const adapter = createChromeStorageAdapter(area)
+
+    const session = (id: string, date: number): GameSession => ({
+      id,
+      gameId: 'word-worm',
+      wordListId: 'list-1',
+      wordListName: 'Week 1',
+      date,
+      wordsCompleted: 4,
+      wordsAttempted: 5,
+      missedWords: ['dog'],
+    })
+
+    await adapter.saveGameSession(session('old', 10))
+    await adapter.saveGameSession(session('new', 20))
+    await adapter.saveGameSession(session('new', 20))
+
+    const sessions = await adapter.getGameSessions()
+    expect(sessions.map((item) => item.id)).toEqual(['new', 'old'])
+    expect((area.data[GAME_SESSIONS_KEY] as GameSession[]).length).toBe(2)
+
+    const malformed = createFakeArea({ [GAME_SESSIONS_KEY]: [{ id: 'broken' }, session('ok', 5)] })
+    const other = createChromeStorageAdapter(malformed)
+    await expect(other.getGameSessions()).resolves.toHaveLength(1)
+  })
+
+  it('clears game sessions when a backup replaces everything', async () => {
+    const area = createFakeArea()
+    const adapter = createChromeStorageAdapter(area)
+
+    await adapter.saveGameSession({
+      id: 'game-1',
+      gameId: 'word-worm',
+      wordListId: 'list-1',
+      wordListName: 'Week 1',
+      date: 10,
+      wordsCompleted: 1,
+      wordsAttempted: 1,
+      missedWords: [],
+    })
+    await adapter.clearAll()
+
+    await expect(adapter.getGameSessions()).resolves.toEqual([])
   })
 })

@@ -1,12 +1,15 @@
 import type { Progress, Word, WordList } from './types'
 
 /**
- * Motivation rules for Spell (issue #4).
+ * Motivation rules for Spell (issues #4 and #11).
  *
  * Everything here is deliberately positive: a finished session always earns
  * at least one star, and a missed day never removes stars or shows a loss
  * message. Pure functions only, so the rules are easy to test.
  */
+
+/** Games are capped per day so they cannot out-earn practice and tests. */
+export const GAME_STAR_DAILY_CAP = 3
 
 export const EMPTY_PROGRESS: Progress = {
   stars: 0,
@@ -14,6 +17,24 @@ export const EMPTY_PROGRESS: Progress = {
   bestStreak: 0,
   lastPracticeDay: null,
   totalSessions: 0,
+  gameStars: 0,
+  gameStarsDay: null,
+}
+
+/**
+ * Fill in fields added after the first release. Older saved progress (and
+ * older chrome.storage values) simply has no game fields yet.
+ */
+export function normalizeProgress(progress: Partial<Progress>): Progress {
+  return {
+    stars: progress.stars ?? 0,
+    streakDays: progress.streakDays ?? 0,
+    bestStreak: progress.bestStreak ?? 0,
+    lastPracticeDay: progress.lastPracticeDay ?? null,
+    totalSessions: progress.totalSessions ?? 0,
+    gameStars: progress.gameStars ?? 0,
+    gameStarsDay: progress.gameStarsDay ?? null,
+  }
 }
 
 /** Local calendar day key, e.g. "2026-11-12". Local, not UTC, so bedtime matters. */
@@ -48,6 +69,14 @@ export function starsForTest(correctCount: number, totalWords: number): number {
 }
 
 /**
+ * Game: one star for finishing a round, two if no wrong letter was eaten.
+ * The daily cap is applied by `recordGameSession`.
+ */
+export function starsForGame(cleanRound: boolean): number {
+  return cleanRound ? 2 : 1
+}
+
+/**
  * Add a finished session to the saved progress. Streaks grow on consecutive
  * local days and simply restart at 1 after a gap - no penalty, no loss copy.
  */
@@ -66,11 +95,42 @@ export function recordSession(
   }
 
   return {
+    ...progress,
     stars: progress.stars + Math.max(0, Math.round(stars)),
     streakDays,
     bestStreak: Math.max(progress.bestStreak, streakDays),
     lastPracticeDay: today,
     totalSessions: progress.totalSessions + 1,
+  }
+}
+
+export interface GameStars {
+  progress: Progress
+  /** Stars actually added, after the daily cap. */
+  awarded: number
+}
+
+/**
+ * Record a finished game round, honouring the daily game cap. A capped round
+ * still advances the streak - playing is practising, even with no stars left.
+ */
+export function recordGameSession(
+  progress: Progress,
+  requestedStars: number,
+  date: Date = new Date(),
+): GameStars {
+  const today = dayKey(date)
+  const used = progress.gameStarsDay === today ? progress.gameStars : 0
+  const awarded = Math.max(0, Math.min(Math.round(requestedStars), GAME_STAR_DAILY_CAP - used))
+  const next = recordSession(progress, awarded, date)
+
+  return {
+    awarded,
+    progress: {
+      ...next,
+      gameStars: used + awarded,
+      gameStarsDay: today,
+    },
   }
 }
 

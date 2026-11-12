@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   EMPTY_PROGRESS,
+  GAME_STAR_DAILY_CAP,
   dayKey,
+  normalizeProgress,
+  recordGameSession,
   recordSession,
   starGlyphs,
   starLabel,
+  starsForGame,
   starsForPractice,
   starsForTest,
   wordOfTheDay,
@@ -58,12 +62,14 @@ describe('recordSession', () => {
   it('starts a streak on the first session', () => {
     const next = recordSession(EMPTY_PROGRESS, 2, new Date(2026, 10, 10))
 
-    expect(next).toEqual({
+    expect(next).toMatchObject({
       stars: 2,
       streakDays: 1,
       bestStreak: 1,
       lastPracticeDay: '2026-11-10',
       totalSessions: 1,
+      gameStars: 0,
+      gameStarsDay: null,
     })
   })
 
@@ -109,6 +115,77 @@ describe('recordSession', () => {
     const zero = recordSession(saved, 0, new Date(2026, 10, 11))
 
     expect(zero.stars).toBe(2)
+  })
+})
+
+describe('game rules', () => {
+  it('rewards a finished round, with a bonus for a clean one', () => {
+    expect(starsForGame(true)).toBe(2)
+    expect(starsForGame(false)).toBe(1)
+  })
+
+  it('caps game stars per local day without touching other stars', () => {
+    const first = recordGameSession(EMPTY_PROGRESS, 2, new Date(2026, 10, 12, 9))
+    expect(first.awarded).toBe(2)
+    expect(first.progress.stars).toBe(2)
+
+    const second = recordGameSession(first.progress, 2, new Date(2026, 10, 12, 16))
+    expect(second.awarded).toBe(1)
+    expect(second.progress.stars).toBe(3)
+    expect(second.progress.gameStars).toBe(GAME_STAR_DAILY_CAP)
+
+    const third = recordGameSession(second.progress, 2, new Date(2026, 10, 12, 18))
+    expect(third.awarded).toBe(0)
+    expect(third.progress.stars).toBe(3)
+  })
+
+  it('still advances the streak when the daily star cap is reached', () => {
+    const capped = {
+      ...EMPTY_PROGRESS,
+      gameStars: GAME_STAR_DAILY_CAP,
+      gameStarsDay: '2026-11-12',
+      lastPracticeDay: '2026-11-11',
+      streakDays: 2,
+    }
+    const next = recordGameSession(capped, 2, new Date(2026, 10, 12))
+
+    expect(next.awarded).toBe(0)
+    expect(next.progress.streakDays).toBe(3)
+    expect(next.progress.gameStars).toBe(GAME_STAR_DAILY_CAP)
+    expect(next.progress.gameStarsDay).toBe('2026-11-12')
+  })
+
+  it('resets the game allowance on a new day', () => {
+    const yesterday = {
+      ...EMPTY_PROGRESS,
+      gameStars: GAME_STAR_DAILY_CAP,
+      gameStarsDay: '2026-11-11',
+    }
+    const today = recordGameSession(yesterday, 2, new Date(2026, 10, 12))
+
+    expect(today.awarded).toBe(2)
+  })
+})
+
+describe('normalizeProgress', () => {
+  it('fills in fields saved before game stars existed', () => {
+    expect(
+      normalizeProgress({
+        stars: 4,
+        streakDays: 2,
+        bestStreak: 3,
+        lastPracticeDay: '2026-11-10',
+        totalSessions: 5,
+      }),
+    ).toEqual({
+      stars: 4,
+      streakDays: 2,
+      bestStreak: 3,
+      lastPracticeDay: '2026-11-10',
+      totalSessions: 5,
+      gameStars: 0,
+      gameStarsDay: null,
+    })
   })
 })
 

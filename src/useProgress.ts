@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { storage } from './db'
-import { EMPTY_PROGRESS, recordSession } from './progress'
+import { EMPTY_PROGRESS, recordGameSession, recordSession } from './progress'
 import type { Progress } from './types'
 
 /**
@@ -32,8 +32,7 @@ export function useProgress() {
     }
   }, [])
 
-  const earnStars = useCallback(async (stars: number): Promise<Progress> => {
-    const next = recordSession(latest.current, stars)
+  const persist = useCallback(async (next: Progress) => {
     latest.current = next
     setProgress(next)
     try {
@@ -41,7 +40,26 @@ export function useProgress() {
     } catch (error) {
       console.warn('Could not save stars and streak', error)
     }
-    return next
   }, [])
-  return { progress, loading, earnStars }
+
+  const earnStars = useCallback(
+    async (stars: number): Promise<Progress> => {
+      const next = recordSession(latest.current, stars)
+      await persist(next)
+      return next
+    },
+    [persist],
+  )
+
+  /** Game rounds respect a small daily cap; returns the stars actually added. */
+  const earnGameStars = useCallback(
+    async (stars: number): Promise<{ awarded: number }> => {
+      const { progress: next, awarded } = recordGameSession(latest.current, stars)
+      await persist(next)
+      return { awarded }
+    },
+    [persist],
+  )
+
+  return { progress, loading, earnStars, earnGameStars }
 }

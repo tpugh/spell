@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie'
-import { EMPTY_PROGRESS } from './progress'
-import type { WordList, TestResult, Progress } from './types'
+import { EMPTY_PROGRESS, normalizeProgress } from './progress'
+import type { GameSession, WordList, TestResult, Progress } from './types'
 
 // Dexie row types (mirror domain types for storage)
 export interface DbWordList {
@@ -31,6 +31,7 @@ class SpellDatabase extends Dexie {
   wordLists!: Table<DbWordList, string>
   testResults!: Table<DbTestResult, string>
   progress!: Table<DbProgress, string>
+  gameSessions!: Table<GameSession, string>
 
   constructor() {
     super('spell-db')
@@ -41,6 +42,10 @@ class SpellDatabase extends Dexie {
     // v2 adds motivation progress. Existing lists and results are kept.
     this.version(2).stores({
       progress: 'id',
+    })
+    // v3 adds arcade game sessions. Existing data is kept untouched.
+    this.version(3).stores({
+      gameSessions: 'id, gameId, date',
     })
   }
 }
@@ -55,10 +60,13 @@ export interface StorageAdapter {
   deleteWordList(id: string): Promise<void>
   getTestResults(): Promise<TestResult[]>
   saveTestResult(result: TestResult): Promise<void>
+  /** Finished arcade rounds, newest first. */
+  getGameSessions(): Promise<GameSession[]>
+  saveGameSession(session: GameSession): Promise<void>
   /** Stars and streak for this device. */
   getProgress(): Promise<Progress>
   saveProgress(progress: Progress): Promise<void>
-  /** Removes every word list and test result (used by backup restore). */
+  /** Removes word lists, test results and game sessions (used by backup restore). */
   clearAll(): Promise<void>
 }
 
@@ -118,24 +126,25 @@ export const dexieAdapter: StorageAdapter = {
       durationMs: result.durationMs,
     })
   },
+  async getGameSessions() {
+    return db.gameSessions.orderBy('date').reverse().toArray()
+  },
+  async saveGameSession(session) {
+    await db.gameSessions.put(session)
+  },
   async getProgress() {
     const row = await db.progress.get('progress')
     if (!row) return EMPTY_PROGRESS
-    return {
-      stars: row.stars,
-      streakDays: row.streakDays,
-      bestStreak: row.bestStreak,
-      lastPracticeDay: row.lastPracticeDay,
-      totalSessions: row.totalSessions,
-    }
+    return normalizeProgress(row)
   },
   async saveProgress(progress) {
     await db.progress.put({ id: 'progress', ...progress })
   },
   async clearAll() {
-    await db.transaction('rw', db.wordLists, db.testResults, async () => {
+    await db.transaction('rw', db.wordLists, db.testResults, db.gameSessions, async () => {
       await db.wordLists.clear()
       await db.testResults.clear()
+      await db.gameSessions.clear()
     })
   },
 }
@@ -154,6 +163,8 @@ export const storage: StorageAdapter = {
   deleteWordList: (id) => activeAdapter.deleteWordList(id),
   getTestResults: () => activeAdapter.getTestResults(),
   saveTestResult: (result) => activeAdapter.saveTestResult(result),
+  getGameSessions: () => activeAdapter.getGameSessions(),
+  saveGameSession: (session) => activeAdapter.saveGameSession(session),
   getProgress: () => activeAdapter.getProgress(),
   saveProgress: (progress) => activeAdapter.saveProgress(progress),
   clearAll: () => activeAdapter.clearAll(),

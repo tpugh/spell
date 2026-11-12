@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { StorageAdapter } from '../db'
 import { EMPTY_PROGRESS } from '../progress'
-import type { Progress, TestResult, WordList } from '../types'
+import type { GameSession, Progress, TestResult, WordList } from '../types'
 import {
   backupFileName,
   exportBackup,
@@ -14,6 +14,7 @@ import {
 interface MemoryAdapter extends StorageAdapter {
   lists: Map<string, WordList>
   results: Map<string, TestResult>
+  games: Map<string, GameSession>
   progress: Progress
   stats: { clearCalls: number }
 }
@@ -24,12 +25,14 @@ function memoryAdapter(initial?: {
 }): MemoryAdapter {
   const lists = new Map((initial?.lists ?? []).map((list) => [list.id, list]))
   const results = new Map((initial?.results ?? []).map((result) => [result.id, result]))
+  const games = new Map<string, GameSession>()
   const progress = { ...EMPTY_PROGRESS }
   const stats = { clearCalls: 0 }
 
   return {
     lists,
     results,
+    games,
     progress,
     stats,
     async getWordLists() {
@@ -47,6 +50,12 @@ function memoryAdapter(initial?: {
     async saveTestResult(result) {
       results.set(result.id, result)
     },
+    async getGameSessions() {
+      return [...games.values()].sort((a, b) => b.date - a.date)
+    },
+    async saveGameSession(session) {
+      games.set(session.id, session)
+    },
     async getProgress() {
       return { ...progress }
     },
@@ -57,6 +66,7 @@ function memoryAdapter(initial?: {
       stats.clearCalls += 1
       lists.clear()
       results.clear()
+      games.clear()
     },
   }
 }
