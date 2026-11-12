@@ -161,8 +161,8 @@ describe('importBackup', () => {
     expect(adapter.stats.clearCalls).toBe(0)
   })
 
-  it('replaces older local data with the backup on merge', async () => {
-    const adapter = memoryAdapter({ lists: [makeList('list-1', 100, 'Old local')] })
+  it('replaces an older local list with the newer backup copy on merge', async () => {
+    const adapter = memoryAdapter({ lists: [makeList('list-1', 50, 'Old local')] })
 
     const summary = await importBackup(adapter, validBackup(), 'merge')
 
