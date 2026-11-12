@@ -12,7 +12,6 @@ interface WordListManagerProps {
 export default function WordListManager({ lists, onSave, onDelete, onNavigate }: WordListManagerProps) {
   const [editing, setEditing] = useState<WordList | null>(null)
   const [newWordText, setNewWordText] = useState('')
-  const [newListName, setNewListName] = useState('')
 
   function startNew() {
     setEditing(createWordList('My List'))
