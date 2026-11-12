@@ -100,6 +100,17 @@ describe('chrome.storage adapter', () => {
     expect(await adapter.getTestResults()).toHaveLength(2)
   })
 
+  it('clears word lists and results for backup replace', async () => {
+    const area = createFakeArea()
+    const adapter = createChromeStorageAdapter(area)
+
+    await adapter.saveWordList(makeList('a', 'Week 1', 100))
+    await adapter.clearAll()
+
+    expect(await adapter.getWordLists()).toEqual([])
+    expect(await adapter.getTestResults()).toEqual([])
+  })
+
   it('treats missing or malformed storage values as empty', async () => {
     const area = createFakeArea({ [WORD_LISTS_KEY]: 'not-an-array' })
     const adapter = createChromeStorageAdapter(area)

@@ -65,5 +65,9 @@ export function createChromeStorageAdapter(area: ChromeStorageArea): StorageAdap
       next.push(result)
       await area.set({ [TEST_RESULTS_KEY]: next })
     },
+
+    async clearAll() {
+      await area.set({ [WORD_LISTS_KEY]: [], [TEST_RESULTS_KEY]: [] })
+    },
   }
 }

@@ -90,6 +90,14 @@ export default function HomeView({ lists, selectedList, onSelectList, onNavigate
           Pick a word list above to start practising.
         </p>
       )}
+
+      <button
+        type="button"
+        className="mt-8 min-h-12 rounded-lg px-3 py-2 text-base font-semibold text-indigo-800 underline-offset-4 hover:bg-indigo-200 hover:underline"
+        onClick={() => onNavigate('backup')}
+      >
+        Grown-ups: back up &amp; restore
+      </button>
     </main>
   )
 }

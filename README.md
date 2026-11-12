@@ -21,6 +21,7 @@ Spelling practice app for young learners (~6 years old).
 - **Practice Mode** — Listen to a word (TTS), type it, get instant feedback, retry missed words
 - **Test Mode** — Take a spelling test with audio prompts, type answers, submit for scoring
 - **Results Screen** — Score, stars, missed words list, retry options
+- **Backup & restore** — Grown-ups can export a JSON backup and restore it on another browser or in the extension
 - **Local-first** — All data stored in browser, no account required
 - **Kid-friendly UI** — Large tap targets, minimal text, encouraging feedback, audio-first
 
@@ -36,6 +37,18 @@ Spell targets WCAG 2.2 AA and is usable with a keyboard, switch access, or a scr
 - **Motion** — animations collapse under `prefers-reduced-motion: reduce`; focus rings thicken under `prefers-contrast: more`
 
 Automated coverage lives in `e2e/a11y.spec.ts` (skip link, focus management, easy-read persistence, 48px targets) and `src/useFontMode.test.ts`.
+
+## Backup & restore
+
+**Grown-ups: back up & restore** on the home screen opens a parent-facing screen that works the same
+in the web app and the extension (Phase 0 of #9).
+
+- **Save a backup** downloads `spell-backup-YYYY-MM-DD.json` with every word list and test result
+- **Restore a backup** validates the file first, shows a preview, then either **merges** (current
+  lists are kept; for the same list id the newest `updatedAt` wins) or **replaces everything**
+- Invalid, foreign, or oversized files are rejected before any data is written
+- The format is versioned (`app: "spell"`, `version: 1`) and covered by unit tests in
+  `src/storage/backup.test.ts` plus E2E tests in `e2e/backup.spec.ts`
 
 ## Getting started
 
@@ -157,7 +170,9 @@ spell/
 │   ├── index.css        # Tailwind, focus/reduced-motion/easy-read styles
 │   ├── types.ts         # Domain types
 │   ├── db.ts            # Dexie + StorageAdapter interface + adapter swap
+│   ├── BackupView.tsx   # Parent backup/restore screen
 │   ├── storage/
+│   │   ├── backup.ts         # JSON backup format, validation, restore
 │   │   ├── chromeStorage.ts  # chrome.storage.local adapter
 │   │   └── configure.ts      # picks the adapter at startup
 │   ├── useWordLists.ts  # Word list CRUD hook
@@ -172,7 +187,7 @@ spell/
 │   │   └── useTTS.ts    # Web Speech API hook
 │   ├── test/setup.ts    # Test setup
 │   └── App.test.tsx     # Unit tests
-├── e2e/                 # Playwright E2E tests (incl. a11y.spec.ts)
+├── e2e/                 # Playwright E2E tests (a11y + backup specs)
 ├── docs/chrome-web-store/listing.md  # Store listing + submission checklist
 ├── Dockerfile           # Multi-stage container build (serve runtime)
 ├── vite.config.ts       # Vite + PWA + Tailwind (+ Pages base path)

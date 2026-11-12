@@ -31,6 +31,7 @@ export type View =
   | 'practice'
   | 'test'
   | 'results'
+  | 'backup'
 
 export interface PracticeState {
   wordList: WordList

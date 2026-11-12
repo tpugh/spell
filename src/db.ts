@@ -44,6 +44,8 @@ export interface StorageAdapter {
   deleteWordList(id: string): Promise<void>
   getTestResults(): Promise<TestResult[]>
   saveTestResult(result: TestResult): Promise<void>
+  /** Removes every word list and test result (used by backup restore). */
+  clearAll(): Promise<void>
 }
 
 function toWordList(row: DbWordList): WordList {
@@ -102,6 +104,12 @@ export const dexieAdapter: StorageAdapter = {
       durationMs: result.durationMs,
     })
   },
+  async clearAll() {
+    await db.transaction('rw', db.wordLists, db.testResults, async () => {
+      await db.wordLists.clear()
+      await db.testResults.clear()
+    })
+  },
 }
 
 // Default adapter: IndexedDB. The Chrome extension swaps it for
@@ -118,4 +126,5 @@ export const storage: StorageAdapter = {
   deleteWordList: (id) => activeAdapter.deleteWordList(id),
   getTestResults: () => activeAdapter.getTestResults(),
   saveTestResult: (result) => activeAdapter.saveTestResult(result),
+  clearAll: () => activeAdapter.clearAll(),
 }
