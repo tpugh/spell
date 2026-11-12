@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useTTS } from './useTTS'
+import { useTTS } from './hooks/useTTS'
 import type { WordList, View, TestResult } from './types'
 import { storage } from './db'
 
@@ -15,7 +15,7 @@ export default function TestView({ wordList, onNavigate, onResult }: TestViewPro
   const [currentIndex, setCurrentIndex] = useState(0)
   const [input, setInput] = useState('')
   const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [submitted, setSubmitted] = useState(false)
+  const [submitted] = useState(false)
   const startTime = useRef(Date.now())
 
   const currentWord = words[currentIndex]
