@@ -228,3 +228,43 @@ test('the movement buttons meet the 48px target size', async ({ page }) => {
     expect(box?.width ?? 0).toBeGreaterThanOrEqual(48)
   }
 })
+
+test('quitting asks first and the quit control sits away from the movement pad', async ({
+  page,
+}) => {
+  await seedLists(page)
+  await openWorm(page, 'worm-list-1')
+
+  const pad = page.getByRole('group', { name: /move the worm/i }).getByRole('button')
+  const quit = page.getByRole('button', { name: /^quit$/i })
+  await expect(quit).toBeVisible()
+
+  // Quit lives in the header, above the board; the d-pad is below it. A whole
+  // board separates them, so a thumb aiming at the arrows cannot hit Quit.
+  const quitBox = await quit.boundingBox()
+  const padBox = await pad.first().boundingBox()
+  expect(quitBox).not.toBeNull()
+  expect(padBox).not.toBeNull()
+  expect((quitBox?.y ?? 0) + (quitBox?.height ?? 0)).toBeLessThan(padBox?.y ?? 0)
+
+  // One tap only asks, and the safe answer has focus.
+  await quit.click()
+  await expect(page.getByRole('heading', { name: /quit this game/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /keep playing/i })).toBeFocused()
+
+  // Escape backs out without quitting.
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('heading', { name: /quit this game/i })).toHaveCount(0)
+  await expect(page.locator('#worm-word')).toBeVisible()
+
+  // Keep playing returns straight to the round.
+  await quit.click()
+  await page.getByRole('button', { name: /keep playing/i }).click()
+  await expect(page.getByRole('heading', { name: 'Word Worm' })).toBeVisible()
+  await expect(page.locator('#worm-word')).toBeVisible()
+
+  // Only the explicit confirmation leaves the game.
+  await quit.click()
+  await page.getByRole('button', { name: /^quit game$/i }).click()
+  await expect(page.getByRole('heading', { name: 'Games' })).toBeVisible()
+})

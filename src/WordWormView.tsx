@@ -42,8 +42,10 @@ export default function WordWormView({ wordList, onExit, onEarnStars }: WordWorm
     createWormState(wordsForRound(list)),
   )
   const [paused, setPaused] = useState(false)
+  const [confirmQuit, setConfirmQuit] = useState(false)
   const [awarded, setAwarded] = useState<number | null>(null)
   const finished = useRef(false)
+  const keepPlaying = useRef<HTMLButtonElement | null>(null)
 
   const word = state.words[state.wordIndex]
   const head = state.worm[0]
@@ -63,8 +65,13 @@ export default function WordWormView({ wordList, onExit, onEarnStars }: WordWorm
   useEffect(() => () => cancel(), [cancel])
 
   useEffect(() => {
-    if (paused) cancel()
-  }, [paused, cancel])
+    if (paused || confirmQuit) cancel()
+  }, [paused, confirmQuit, cancel])
+
+  // Land on the safe choice when the quit prompt opens.
+  useEffect(() => {
+    if (confirmQuit) keepPlaying.current?.focus()
+  }, [confirmQuit])
 
   // Keyboard play: arrows or WASD, Escape for pause. Works with no pointer.
   useEffect(() => {
@@ -73,11 +80,16 @@ export default function WordWormView({ wordList, onExit, onEarnStars }: WordWorm
 
       if (event.key === 'Escape') {
         event.preventDefault()
+        if (confirmQuit) {
+          // Escape backs out of the quit prompt, never quits by accident.
+          setConfirmQuit(false)
+          return
+        }
         setPaused((current) => !current)
         return
       }
 
-      if (paused || state.phase !== 'playing' || state.wordComplete) return
+      if (paused || confirmQuit || state.phase !== 'playing' || state.wordComplete) return
 
       const move = MOVE_KEYS[event.key.toLowerCase()]
       if (!move) return
@@ -87,7 +99,7 @@ export default function WordWormView({ wordList, onExit, onEarnStars }: WordWorm
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [paused, state.phase, state.wordComplete])
+  }, [paused, confirmQuit, state.phase, state.wordComplete])
 
   // Save the round once: stars (with the daily cap) and the review list.
   useEffect(() => {
@@ -135,12 +147,23 @@ export default function WordWormView({ wordList, onExit, onEarnStars }: WordWorm
     finished.current = false
     setAwarded(null)
     setPaused(false)
+    setConfirmQuit(false)
     dispatch({ type: 'restart', words: wordsForRound(wordList, state.missedWords) })
   }
 
   function quit() {
     cancel()
     onExit()
+  }
+
+  /**
+   * Quitting always asks first. The confirmation lives at the top of the
+   * screen, far from the movement controls, so a stray tap near the d-pad
+   * can never end a round.
+   */
+  function askQuit() {
+    setPaused(false)
+    setConfirmQuit(true)
   }
 
   if (state.phase === 'summary') {
@@ -242,7 +265,7 @@ export default function WordWormView({ wordList, onExit, onEarnStars }: WordWorm
     )
   })
 
-  const moveDisabled = paused || state.wordComplete
+  const moveDisabled = paused || confirmQuit || state.wordComplete
 
   return (
     <main
@@ -250,14 +273,26 @@ export default function WordWormView({ wordList, onExit, onEarnStars }: WordWorm
       tabIndex={-1}
       className="relative flex min-h-screen flex-col items-center bg-gradient-to-b from-slate-950 via-indigo-950 to-slate-900 p-4 text-white"
     >
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-        <header className="mt-2 flex items-baseline justify-between gap-3">
-          <h1 className="font-mono text-2xl font-black uppercase tracking-widest text-cyan-300">
-            Word Worm
-          </h1>
-          <p className="text-sm font-semibold text-indigo-100">
-            Word {state.wordIndex + 1} of {state.words.length}
-          </p>
+      <div
+        className="mx-auto flex w-full max-w-md flex-1 flex-col"
+        aria-hidden={confirmQuit ? true : undefined}
+      >
+        <header className="mt-2 flex items-center justify-between gap-3">
+          <div>
+            <h1 className="font-mono text-2xl font-black uppercase tracking-widest text-cyan-300">
+              Word Worm
+            </h1>
+            <p className="text-sm font-semibold text-indigo-100">
+              Word {state.wordIndex + 1} of {state.words.length}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="min-h-12 min-w-12 shrink-0 rounded-lg border-2 border-indigo-400 px-4 py-3 text-base font-semibold text-indigo-100 hover:bg-indigo-900"
+            onClick={askQuit}
+          >
+            Quit
+          </button>
         </header>
 
         <p className="sr-only">
@@ -345,7 +380,7 @@ export default function WordWormView({ wordList, onExit, onEarnStars }: WordWorm
               <button
                 type="button"
                 className="min-h-12 w-full max-w-56 rounded-xl border-2 border-cyan-300 px-6 py-3 text-lg font-semibold text-white hover:bg-cyan-950"
-                onClick={quit}
+                onClick={askQuit}
               >
                 Quit to games
               </button>
@@ -417,15 +452,38 @@ export default function WordWormView({ wordList, onExit, onEarnStars }: WordWorm
             Audio isn&apos;t available on this device. Ask a grown-up to read the word aloud.
           </p>
         )}
-
-        <button
-          type="button"
-          className="mt-4 min-h-12 w-full rounded-lg px-3 py-2 text-base font-semibold text-indigo-100 underline-offset-4 hover:bg-indigo-900 hover:underline"
-          onClick={quit}
-        >
-          Quit game
-        </button>
       </div>
+
+      {confirmQuit && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="quit-heading"
+          className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-6 text-center"
+        >
+          <h2 id="quit-heading" className="text-2xl font-black text-white">
+            Quit this game?
+          </h2>
+          <p className="max-w-xs text-sm text-indigo-200">
+            Stars are saved when you finish a round. You can play again any time.
+          </p>
+          <button
+            ref={keepPlaying}
+            type="button"
+            className="min-h-14 w-full max-w-56 rounded-xl bg-lime-400 px-6 py-4 text-xl font-black text-slate-900 hover:bg-lime-300 active:scale-95"
+            onClick={() => setConfirmQuit(false)}
+          >
+            Keep playing
+          </button>
+          <button
+            type="button"
+            className="min-h-12 w-full max-w-56 rounded-xl border-2 border-cyan-300 px-6 py-3 text-lg font-semibold text-white hover:bg-cyan-950"
+            onClick={quit}
+          >
+            Quit game
+          </button>
+        </div>
+      )}
     </main>
   )
 }

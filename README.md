@@ -99,6 +99,9 @@ Design rules for every game:
 - **Step-based movement** — the worm moves one cell per arrow/WASD press or d-pad tap, not on a
   timer. It is fully playable with the keyboard alone, and tapping a cell next to the head works for
   pointer users.
+- **Accidental quits are impossible** — Quit sits in the header, a whole board away from the d-pad,
+  and always asks "Quit this game?" first. Escape backs out of that prompt, and the safe answer owns
+  initial focus. The pause overlay's exit uses the same confirmation.
 - **Reduced motion** — the pulse becomes a static outline, and there is no flashing or screen shake.
 - **Stars** — a finished round earns 1 star, or 2 for a clean round, capped at
   `GAME_STAR_DAILY_CAP` (3) per local day so games cannot out-earn practice and tests. A finished
