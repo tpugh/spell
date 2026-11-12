@@ -18,6 +18,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "vite.config.ts", "playwright.config.ts"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": ["src", "vite.config.ts", "playwright.config.ts", "tsconfig.node.json"],
+  "exclude": ["node_modules", "dist"]
 }
