@@ -8,7 +8,8 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
-  plugins: [\n    // eslint-disable-next-line @typescript-eslint/no-explicit-any\n    react(),
+  plugins: [
+    react(),
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -38,10 +39,5 @@ export default defineConfig({
   build: {
     target: 'es2022',
     sourcemap: true,
-  },
-  // @ts-expect-error - vitest config\n  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: './src/test/setup.ts',
   },
 })
