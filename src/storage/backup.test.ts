@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { StorageAdapter } from '../db'
-import type { TestResult, WordList } from '../types'
+import { EMPTY_PROGRESS } from '../progress'
+import type { Progress, TestResult, WordList } from '../types'
 import {
   backupFileName,
   exportBackup,
@@ -13,6 +14,7 @@ import {
 interface MemoryAdapter extends StorageAdapter {
   lists: Map<string, WordList>
   results: Map<string, TestResult>
+  progress: Progress
   stats: { clearCalls: number }
 }
 
@@ -22,11 +24,13 @@ function memoryAdapter(initial?: {
 }): MemoryAdapter {
   const lists = new Map((initial?.lists ?? []).map((list) => [list.id, list]))
   const results = new Map((initial?.results ?? []).map((result) => [result.id, result]))
+  const progress = { ...EMPTY_PROGRESS }
   const stats = { clearCalls: 0 }
 
   return {
     lists,
     results,
+    progress,
     stats,
     async getWordLists() {
       return [...lists.values()].sort((a, b) => b.updatedAt - a.updatedAt)
@@ -42,6 +46,12 @@ function memoryAdapter(initial?: {
     },
     async saveTestResult(result) {
       results.set(result.id, result)
+    },
+    async getProgress() {
+      return { ...progress }
+    },
+    async saveProgress(next) {
+      Object.assign(progress, next)
     },
     async clearAll() {
       stats.clearCalls += 1

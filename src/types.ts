@@ -25,6 +25,16 @@ export interface TestResult {
   durationMs: number
 }
 
+/** Device-local motivation progress (stars + daily streak). */
+export interface Progress {
+  stars: number
+  streakDays: number
+  bestStreak: number
+  /** Local calendar day of the last finished session, e.g. "2026-11-12". */
+  lastPracticeDay: string | null
+  totalSessions: number
+}
+
 export type View =
   | 'home'
   | 'lists'

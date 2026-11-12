@@ -2,7 +2,7 @@
 
 Spelling practice app for young learners (~6 years old).
 
-**Live app:** https://tpugh.github.io/spell/ · **Chrome extension:** `spell-chrome-extension.zip` on the [v0.0.2 release](https://github.com/tpugh/spell/releases/tag/v0.0.2)
+**Live app:** https://tpugh.github.io/spell/ · **Chrome extension:** `spell-chrome-extension.zip` on the [v0.0.1 release](https://github.com/tpugh/spell/releases/tag/v0.0.1)
 
 ## Tech stack (MVP)
 
@@ -21,6 +21,8 @@ Spelling practice app for young learners (~6 years old).
 - **Practice Mode** — Listen to a word (TTS), type it, get instant feedback, retry missed words
 - **Test Mode** — Take a spelling test with audio prompts, type answers, submit for scoring
 - **Results Screen** — Score, stars, missed words list, retry options
+- **Stars & streaks** — Every finished session earns stars; consecutive practice days build a streak, with no penalties for mistakes
+- **Word of the day** — One word picked from the saved lists each day, with a play button
 - **Backup & restore** — Grown-ups can export a JSON backup and restore it on another browser or in the extension
 - **Local-first** — All data stored in browser, no account required
 - **Kid-friendly UI** — Large tap targets, minimal text, encouraging feedback, audio-first
@@ -49,6 +51,29 @@ in the web app and the extension (Phase 0 of #9).
 - Invalid, foreign, or oversized files are rejected before any data is written
 - The format is versioned (`app: "spell"`, `version: 1`) and covered by unit tests in
   `src/storage/backup.test.ts` plus E2E tests in `e2e/backup.spec.ts`
+
+## Motivation (stars, streaks and word of the day)
+
+Gamification is local-only and deliberately low-pressure (issue #4). Rules live in
+`src/progress.ts` as pure functions, so they are unit-tested without a browser.
+
+- **Practice stars** — 1 star for finishing, 2 for a clean run where no word needed a retry. A
+  mistake never costs a star.
+- **Test stars** — 1 star for finishing, plus 1 at 70% and another at 90%. A completed test is never
+  worth zero stars, so there is no "failed" state.
+- **Streak** — one "practice day" is any day with a finished practice or test. Consecutive days grow
+  the streak; a missed day quietly restarts it at 1. Stars are never removed and there is no "you
+  lost your streak" message.
+- **Home screen** — star total, day streak, and a screen-reader summary in a live region. The
+  **word of the day** card picks a stable word from all saved lists and can speak it.
+- **Perfect test** — confetti (hidden under `prefers-reduced-motion`) plus spoken praise through the
+  Web Speech API. Both are decorative and never block the result.
+- **Storage** — `StorageAdapter.getProgress()` / `saveProgress()` on IndexedDB (Dexie v2 `progress`
+  table) and `chrome.storage.local` (`spell:progress`). Stars and streaks stay on the device and are
+  intentionally not part of the Phase 0 backup file.
+- **Coverage** — `src/progress.test.ts` (star rules, streak boundaries, word-of-the-day determinism),
+  `src/storage/chromeStorage.test.ts` (adapter round-trip) and `e2e/gamification.spec.ts` (stars,
+  streak, mistake handling, perfect-score celebration).
 
 ## Getting started
 
@@ -97,7 +122,7 @@ npm run build:extension
 - Keyboard, screen reader, and easy-read support are inherited from the web app
 
 **Install from a release:** download `spell-chrome-extension.zip` from the
-[v0.0.2 release](https://github.com/tpugh/spell/releases/tag/v0.0.2), unzip it, and load the folder
+[v0.0.1 release](https://github.com/tpugh/spell/releases/tag/v0.0.1), unzip it, and load the folder
 from `chrome://extensions`.
 
 Store submission copy, permission justifications, and the screenshot checklist live in
@@ -121,7 +146,7 @@ Live URL: https://tpugh.github.io/spell/
 
 `.github/workflows/release-extension.yml` (manual dispatch) builds the extension, zips
 `dist-extension/` and attaches `spell-chrome-extension.zip` to an existing release tag
-(default `v0.0.2`). Run it from **Actions → Release Chrome extension → Run workflow**.
+(default `v0.0.1`). Run it from **Actions → Release Chrome extension → Run workflow**.
 
 ### Docker / self-host
 
@@ -170,6 +195,8 @@ spell/
 │   ├── index.css        # Tailwind, focus/reduced-motion/easy-read styles
 │   ├── types.ts         # Domain types
 │   ├── db.ts            # Dexie + StorageAdapter interface + adapter swap
+│   ├── progress.ts      # Star/streak rules + word of the day (pure functions)
+│   ├── useProgress.ts   # Loads and saves stars/streak for this device
 │   ├── BackupView.tsx   # Parent backup/restore screen
 │   ├── storage/
 │   │   ├── backup.ts         # JSON backup format, validation, restore
@@ -187,7 +214,7 @@ spell/
 │   │   └── useTTS.ts    # Web Speech API hook
 │   ├── test/setup.ts    # Test setup
 │   └── App.test.tsx     # Unit tests
-├── e2e/                 # Playwright E2E tests (a11y + backup specs)
+├── e2e/                 # Playwright E2E tests (a11y, backup, gamification)
 ├── docs/chrome-web-store/listing.md  # Store listing + submission checklist
 ├── Dockerfile           # Multi-stage container build (serve runtime)
 ├── vite.config.ts       # Vite + PWA + Tailwind (+ Pages base path)

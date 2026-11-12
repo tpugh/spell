@@ -1,5 +1,6 @@
 import type { StorageAdapter } from '../db'
-import type { TestResult, WordList } from '../types'
+import { EMPTY_PROGRESS } from '../progress'
+import type { Progress, TestResult, WordList } from '../types'
 
 /**
  * The subset of chrome.storage.local this app needs.
@@ -18,6 +19,19 @@ interface ChromeLike {
 
 export const WORD_LISTS_KEY = 'spell:wordLists'
 export const TEST_RESULTS_KEY = 'spell:testResults'
+export const PROGRESS_KEY = 'spell:progress'
+
+function isProgress(value: unknown): value is Progress {
+  if (typeof value !== 'object' || value === null) return false
+  const progress = value as Record<string, unknown>
+  return (
+    typeof progress.stars === 'number' &&
+    typeof progress.streakDays === 'number' &&
+    typeof progress.bestStreak === 'number' &&
+    typeof progress.totalSessions === 'number' &&
+    (progress.lastPracticeDay === null || typeof progress.lastPracticeDay === 'string')
+  )
+}
 
 /** Returns chrome.storage.local when running inside the extension, else null. */
 export function getChromeStorage(): ChromeStorageArea | null {
@@ -68,6 +82,16 @@ export function createChromeStorageAdapter(area: ChromeStorageArea): StorageAdap
 
     async clearAll() {
       await area.set({ [WORD_LISTS_KEY]: [], [TEST_RESULTS_KEY]: [] })
+    },
+
+    async getProgress() {
+      const stored = await area.get(PROGRESS_KEY)
+      const value = stored[PROGRESS_KEY]
+      return isProgress(value) ? value : EMPTY_PROGRESS
+    },
+
+    async saveProgress(progress) {
+      await area.set({ [PROGRESS_KEY]: progress })
     },
   }
 }

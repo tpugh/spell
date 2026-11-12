@@ -6,6 +6,7 @@ import TestView from './TestView'
 import ResultsView from './ResultsView'
 import BackupView from './BackupView'
 import { useWordLists } from './useWordLists'
+import { useProgress } from './useProgress'
 import type { WordList, View, TestResult } from './types'
 
 const VIEW_LABELS: Record<View, string> = {
@@ -19,10 +20,12 @@ const VIEW_LABELS: Record<View, string> = {
 
 export default function App() {
   const { lists, loading, save, remove, refresh } = useWordLists()
+  const { progress, loading: progressLoading, earnStars } = useProgress()
   const [view, setView] = useState<View>('home')
   const [selectedListId, setSelectedListId] = useState<string | null>(null)
   const [activeList, setActiveList] = useState<WordList | null>(null)
   const [lastResult, setLastResult] = useState<TestResult | null>(null)
+  const [lastStars, setLastStars] = useState(0)
 
   const selectedList = selectedListId
     ? (lists.find((l) => l.id === selectedListId) ?? null)
@@ -34,13 +37,13 @@ export default function App() {
   const hasNavigated = useRef(false)
 
   useEffect(() => {
-    if (loading) return
+    if (loading || progressLoading) return
     if (!hasNavigated.current) {
       hasNavigated.current = true
       return
     }
     document.getElementById('main-content')?.focus()
-  }, [view, loading])
+  }, [view, loading, progressLoading])
 
   function navigate(next: View) {
     if ((next === 'practice' || next === 'test') && selectedList) {
@@ -49,7 +52,7 @@ export default function App() {
     setView(next)
   }
 
-  if (loading) {
+  if (loading || progressLoading) {
     return (
       <div role="status" className="flex min-h-screen items-center justify-center bg-indigo-50">
         <p className="text-2xl font-bold text-indigo-800">Loading...</p>
@@ -74,6 +77,7 @@ export default function App() {
         <HomeView
           lists={lists}
           selectedList={selectedList}
+          progress={progress}
           onSelectList={(list) => setSelectedListId(list.id)}
           onNavigate={navigate}
         />
@@ -91,15 +95,21 @@ export default function App() {
       )}
 
       {view === 'practice' && activeList && (
-        <PracticeView wordList={activeList} onNavigate={setView} />
+        <PracticeView
+          wordList={activeList}
+          onNavigate={setView}
+          onEarnStars={(stars) => void earnStars(stars)}
+        />
       )}
 
       {view === 'test' && activeList && (
         <TestView
           wordList={activeList}
           onNavigate={setView}
-          onResult={(result) => {
+          onEarnStars={(stars) => void earnStars(stars)}
+          onResult={(result, starsEarned) => {
             setLastResult(result)
+            setLastStars(starsEarned)
             setView('results')
           }}
         />
@@ -108,6 +118,8 @@ export default function App() {
       {view === 'results' && lastResult && (
         <ResultsView
           result={lastResult}
+          starsEarned={lastStars}
+          totalStars={progress.stars}
           onNavigate={setView}
           onRetryMissed={() => {
             if (lastResult.missedWords.length === 0) return

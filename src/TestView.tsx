@@ -1,21 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTTS } from './hooks/useTTS'
+import { starsForTest } from './progress'
 import type { TestResult, WordList, View } from './types'
 import { storage } from './db'
 
 interface TestViewProps {
   wordList: WordList
   onNavigate: (view: View) => void
-  onResult: (result: TestResult) => void
+  onEarnStars?: (stars: number) => void
+  onResult: (result: TestResult, starsEarned: number) => void
 }
 
-export default function TestView({ wordList, onNavigate, onResult }: TestViewProps) {
+export default function TestView({ wordList, onNavigate, onEarnStars, onResult }: TestViewProps) {
   const { speak, cancel, isSupported } = useTTS()
   const words = wordList.words
   const [currentIndex, setCurrentIndex] = useState(0)
   const [input, setInput] = useState('')
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const startTime = useRef(Date.now())
+  const finished = useRef(false)
 
   const currentWord = words[currentIndex]
   const progress = ((currentIndex + 1) / words.length) * 100
@@ -45,6 +48,8 @@ export default function TestView({ wordList, onNavigate, onResult }: TestViewPro
   }
 
   async function finish() {
+    if (finished.current) return
+    finished.current = true
     saveAnswer()
     const finalAnswers = { ...answers, [currentWord.id]: input.trim() }
     const missed: string[] = []
@@ -70,8 +75,11 @@ export default function TestView({ wordList, onNavigate, onResult }: TestViewPro
       durationMs: Date.now() - startTime.current,
     }
 
+    const starsEarned = starsForTest(correct, words.length)
+
     await storage.saveTestResult(result)
-    onResult(result)
+    onEarnStars?.(starsEarned)
+    onResult(result, starsEarned)
   }
 
   function quit() {

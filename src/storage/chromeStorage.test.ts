@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
+  PROGRESS_KEY,
   TEST_RESULTS_KEY,
   WORD_LISTS_KEY,
   createChromeStorageAdapter,
   type ChromeStorageArea,
 } from './chromeStorage'
+import { EMPTY_PROGRESS } from '../progress'
 import type { TestResult, WordList } from '../types'
 
 function createFakeArea(initial: Record<string, unknown> = {}): ChromeStorageArea & {
@@ -115,5 +117,33 @@ describe('chrome.storage adapter', () => {
     const area = createFakeArea({ [WORD_LISTS_KEY]: 'not-an-array' })
     const adapter = createChromeStorageAdapter(area)
     await expect(adapter.getWordLists()).resolves.toEqual([])
+  })
+
+  it('stores stars and streaks and keeps them when lists are cleared', async () => {
+    const area = createFakeArea()
+    const adapter = createChromeStorageAdapter(area)
+
+    await expect(adapter.getProgress()).resolves.toEqual(EMPTY_PROGRESS)
+
+    const progress = {
+      stars: 7,
+      streakDays: 3,
+      bestStreak: 4,
+      lastPracticeDay: '2026-11-12',
+      totalSessions: 5,
+    }
+    await adapter.saveProgress(progress)
+
+    await expect(adapter.getProgress()).resolves.toEqual(progress)
+    expect(area.data[PROGRESS_KEY]).toEqual(progress)
+
+    await adapter.clearAll()
+    await expect(adapter.getProgress()).resolves.toEqual(progress)
+  })
+
+  it('falls back to empty progress when the stored value is malformed', async () => {
+    const area = createFakeArea({ [PROGRESS_KEY]: { stars: 'lots' } })
+    const adapter = createChromeStorageAdapter(area)
+    await expect(adapter.getProgress()).resolves.toEqual(EMPTY_PROGRESS)
   })
 })

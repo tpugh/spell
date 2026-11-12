@@ -89,3 +89,34 @@ html[data-font="easy-read"] select {
     outline-width: 4px;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Celebration confetti (perfect test score)                           */
+/* Purely decorative: placed behind content, hidden from AT, and       */
+/* removed entirely when the user prefers reduced motion.              */
+/* ------------------------------------------------------------------ */
+.confetti-piece {
+  position: absolute;
+  top: -1rem;
+  width: 0.6rem;
+  height: 0.9rem;
+  border-radius: 0.15rem;
+  animation: confetti-fall 2.4s ease-in forwards;
+}
+
+@keyframes confetti-fall {
+  from {
+    transform: translateY(-2rem) rotate(0deg);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(105vh) rotate(540deg);
+    opacity: 0.85;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confetti-piece {
+    display: none;
+  }
+}

@@ -1,14 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTTS } from './hooks/useTTS'
+import { starsForPractice } from './progress'
 import type { WordList, View } from './types'
 
 interface PracticeViewProps {
   wordList: WordList
   onNavigate: (view: View) => void
+  onEarnStars?: (stars: number) => void
   onComplete?: (missed: string[]) => void
 }
 
-export default function PracticeView({ wordList, onNavigate, onComplete }: PracticeViewProps) {
+export default function PracticeView({
+  wordList,
+  onNavigate,
+  onEarnStars,
+  onComplete,
+}: PracticeViewProps) {
   const { speak, cancel, isSupported } = useTTS()
   const words = wordList.words
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -17,6 +24,8 @@ export default function PracticeView({ wordList, onNavigate, onComplete }: Pract
   const [missed, setMissed] = useState<string[]>([])
   const [attempts, setAttempts] = useState(0)
   const [completed, setCompleted] = useState(false)
+  const [earned, setEarned] = useState(0)
+  const finished = useRef(false)
 
   const currentWord = words[currentIndex]
   const progress = ((currentIndex + (feedback === 'correct' ? 1 : 0)) / words.length) * 100
@@ -53,7 +62,12 @@ export default function PracticeView({ wordList, onNavigate, onComplete }: Pract
     if (currentIndex < words.length - 1) {
       setCurrentIndex((index) => index + 1)
     } else {
+      if (finished.current) return
+      finished.current = true
+      const stars = starsForPractice(missed.length, words.length)
+      setEarned(stars)
       setCompleted(true)
+      onEarnStars?.(stars)
       onComplete?.(missed)
     }
   }
@@ -63,6 +77,11 @@ export default function PracticeView({ wordList, onNavigate, onComplete }: Pract
     setFeedback(null)
   }
 
+  // Move focus to the summary so screen readers hear the result and the stars.
+  useEffect(() => {
+    if (completed) document.getElementById('main-content')?.focus()
+  }, [completed])
+
   if (completed) {
     return (
       <main
@@ -70,15 +89,20 @@ export default function PracticeView({ wordList, onNavigate, onComplete }: Pract
         tabIndex={-1}
         className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-green-100 to-teal-100 p-6"
       >
-        <h1 className="mb-4 text-4xl font-extrabold text-green-900">Great job!</h1>
-        <p className="mb-2 text-2xl text-gray-800">You practiced {words.length} words</p>
-        {missed.length === 0 ? (
-          <p className="mb-6 text-2xl font-bold text-green-800">
-            <span aria-hidden="true">⭐⭐⭐ </span>All correct!
-          </p>
-        ) : (
-          <p className="mb-6 max-w-md text-center text-xl text-gray-800">
-            {missed.length} word{missed.length !== 1 ? 's' : ''} to review: {missed.join(', ')}
+        <h1 className="mb-2 text-4xl font-extrabold text-green-900">Great job!</h1>
+        <p className="mb-3 text-2xl text-gray-800">You practiced {words.length} words</p>
+        <p className="mb-2 text-3xl font-bold text-amber-800">
+          <span aria-hidden="true">{earned === 2 ? '⭐⭐ ' : '⭐ '}</span>
+          You earned {earned} {earned === 1 ? 'star' : 'stars'}!
+        </p>
+        <p className="mb-4 text-lg text-gray-800">
+          {earned === 2
+            ? 'Every word first time — amazing!'
+            : 'Every practice counts. Keep it up!'}
+        </p>
+        {missed.length > 0 && (
+          <p className="mb-4 max-w-md text-center text-lg text-gray-800">
+            Words to review: {missed.join(', ')}
           </p>
         )}
         <div className="flex flex-wrap justify-center gap-4">
@@ -92,6 +116,8 @@ export default function PracticeView({ wordList, onNavigate, onComplete }: Pract
               setMissed([])
               setAttempts(0)
               setCompleted(false)
+              setEarned(0)
+              finished.current = false
             }}
           >
             Practice Again
