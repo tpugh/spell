@@ -5,10 +5,8 @@ test('home page loads and shows Spell heading', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Spell' })).toBeVisible()
 })
 
-test('tap counter increments', async ({ page }) => {
+test('can open the word list manager', async ({ page }) => {
   await page.goto('/')
-  const button = page.getByRole('button', { name: /Taps:/ })
-  await expect(button).toContainText('Taps: 0')
-  await button.click()
-  await expect(button).toContainText('Taps: 1')
+  await page.getByRole('button', { name: /Manage Word Lists/i }).click()
+  await expect(page.getByRole('heading', { name: /Word Lists/i })).toBeVisible()
 })
