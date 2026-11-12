@@ -2,7 +2,7 @@
 
 Spelling practice app for young learners (~6 years old).
 
-**Live app:** https://tpugh.github.io/spell/ · **Chrome extension:** `spell-chrome-extension.zip` on the [v0.0.1 release](https://github.com/tpugh/spell/releases/tag/v0.0.1)
+**Live app:** https://tpugh.github.io/spell/ · **Chrome extension:** `spell-chrome-extension.zip` on the [v0.0.2 release](https://github.com/tpugh/spell/releases/tag/v0.0.2)
 
 ## Tech stack (MVP)
 
@@ -97,7 +97,7 @@ npm run build:extension
 - Keyboard, screen reader, and easy-read support are inherited from the web app
 
 **Install from a release:** download `spell-chrome-extension.zip` from the
-[v0.0.1 release](https://github.com/tpugh/spell/releases/tag/v0.0.1), unzip it, and load the folder
+[v0.0.2 release](https://github.com/tpugh/spell/releases/tag/v0.0.2), unzip it, and load the folder
 from `chrome://extensions`.
 
 Store submission copy, permission justifications, and the screenshot checklist live in
@@ -121,7 +121,7 @@ Live URL: https://tpugh.github.io/spell/
 
 `.github/workflows/release-extension.yml` (manual dispatch) builds the extension, zips
 `dist-extension/` and attaches `spell-chrome-extension.zip` to an existing release tag
-(default `v0.0.1`). Run it from **Actions → Release Chrome extension → Run workflow**.
+(default `v0.0.2`). Run it from **Actions → Release Chrome extension → Run workflow**.
 
 ### Docker / self-host
 
