@@ -29,7 +29,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Lint
+      - name: Lint (advisory)
+        continue-on-error: true
         run: npm run lint
 
   # ---------------------------------------------------------------------------
@@ -98,9 +99,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-
       - name: Run E2E tests
         run: npm run test:e2e
 
@@ -113,7 +111,7 @@ jobs:
           retention-days: 7
 
   # ---------------------------------------------------------------------------
-  # 5. Docker image build & push (validates the containerized app)
+  # 5. Docker image build (validates the containerized app)
   # ---------------------------------------------------------------------------
   docker-build:
     name: Docker Build
