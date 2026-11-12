@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useTTS } from './useTTS'
+import { useTTS } from './hooks/useTTS'
 import type { WordList, View } from './types'
 
 interface PracticeViewProps {
