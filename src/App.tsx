@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import HomeView from './HomeView'
 import WordListManager from './WordListManager'
 import PracticeView from './PracticeView'
@@ -15,22 +15,15 @@ export default function App() {
   const [lastResult, setLastResult] = useState<TestResult | null>(null)
 
   const selectedList = selectedListId
-    ? lists.find((l) => l.id === selectedListId) ?? null
+    ? (lists.find((l) => l.id === selectedListId) ?? null)
     : null
 
-  const handleSelectList = useCallback((list: WordList) => {
-    setSelectedListId(list.id)
-  }, [])
-
-  const handleNavigate = useCallback((v: View) => {
-    if (v === 'practice' && selectedList) {
+  function navigate(next: View) {
+    if ((next === 'practice' || next === 'test') && selectedList) {
       setActiveList(selectedList)
     }
-    if (v === 'test' && selectedList) {
-      setActiveList(selectedList)
-    }
-    setView(v)
-  }, [selectedList])
+    setView(next)
+  }
 
   if (loading) {
     return (
@@ -46,24 +39,26 @@ export default function App() {
         <HomeView
           lists={lists}
           selectedList={selectedList}
-          onSelectList={handleSelectList}
-          onNavigate={handleNavigate}
+          onSelectList={(list) => setSelectedListId(list.id)}
+          onNavigate={navigate}
         />
       )}
+
       {view === 'lists' && (
         <WordListManager
           lists={lists}
-          onSave={async (list) => { await save(list) }}
+          onSave={async (list) => {
+            await save(list)
+          }}
           onDelete={remove}
           onNavigate={setView}
         />
       )}
+
       {view === 'practice' && activeList && (
-        <PracticeView
-          wordList={activeList}
-          onNavigate={setView}
-        />
+        <PracticeView wordList={activeList} onNavigate={setView} />
       )}
+
       {view === 'test' && activeList && (
         <TestView
           wordList={activeList}
@@ -74,25 +69,25 @@ export default function App() {
           }}
         />
       )}
+
       {view === 'results' && lastResult && (
         <ResultsView
           result={lastResult}
           onNavigate={setView}
           onRetryMissed={() => {
-            if (lastResult.missedWords.length > 0) {
-              const missedList: WordList = {
-                id: 'missed-' + Date.now(),
-                name: 'Missed Words',
-                words: lastResult.missedWords.map((text) => ({
-                  id: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2),
-                  text,
-                })),
-                createdAt: Date.now(),
-                updatedAt: Date.now(),
-              }
-              setActiveList(missedList)
-              setView('practice')
+            if (lastResult.missedWords.length === 0) return
+            const missedList: WordList = {
+              id: `missed-${Date.now()}`,
+              name: 'Missed Words',
+              words: lastResult.missedWords.map((text) => ({
+                id: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2),
+                text,
+              })),
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
             }
+            setActiveList(missedList)
+            setView('practice')
           }}
         />
       )}
