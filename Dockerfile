@@ -1,31 +1,29 @@
 # ---------------------------------------------------------------------------
 # Multi-stage Dockerfile for Spell (React + Vite + TypeScript + Tailwind)
+# No nginx — uses `serve` for static file serving with SPA fallback
 # ---------------------------------------------------------------------------
 
 # ---------- Stage 1: Build ----------
 FROM node:22-alpine AS build
 WORKDIR /app
 
-# Install dependencies first (layer caching)
-COPY package.json package-lock.json* ./
+COPY package.json ./
 RUN npm install --ignore-scripts
 
-# Copy source and build
 COPY . .
 RUN npm run build
 
-# ---------- Stage 2: Production (nginx) ----------
-FROM nginx:1.27-alpine AS production
+# ---------- Stage 2: Production (serve) ----------
+FROM node:22-alpine AS production
+WORKDIR /app
 
-# Copy built assets
-COPY --from=build /app/dist /usr/share/nginx/html
+RUN npm install -g serve
 
-# SPA fallback config (client-side routing)
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist ./dist
 
-EXPOSE 80
+EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget -qO- http://localhost/ || exit 1
+  CMD wget -qO- http://localhost:3000/ || exit 1
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["serve", "-s", "dist", "-l", "3000"]
