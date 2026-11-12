@@ -13,6 +13,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 //   - no modulepreload polyfill, because MV3 blocks inline scripts
 export default defineConfig({
   base: './',
+  // Public assets are copied per-build below (icons live in extension/icons).
+  publicDir: false,
   plugins: [react(), tailwindcss()],
   build: {
     outDir: 'dist-extension',
