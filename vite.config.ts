@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config'
+import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import tailwindcss from '@tailwindcss/vite'
@@ -8,8 +8,7 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
-  plugins: [
-    react(),
+  plugins: [\n    // eslint-disable-next-line @typescript-eslint/no-explicit-any\n    react(),
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -40,7 +39,7 @@ export default defineConfig({
     target: 'es2022',
     sourcemap: true,
   },
-  test: {
+  // @ts-expect-error - vitest config\n  test: {
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
