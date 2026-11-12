@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import HomeView from './HomeView'
 import WordListManager from './WordListManager'
 import PracticeView from './PracticeView'
@@ -6,6 +6,14 @@ import TestView from './TestView'
 import ResultsView from './ResultsView'
 import { useWordLists } from './useWordLists'
 import type { WordList, View, TestResult } from './types'
+
+const VIEW_LABELS: Record<View, string> = {
+  home: 'Home',
+  lists: 'Word lists',
+  practice: 'Practice mode',
+  test: 'Test mode',
+  results: 'Test results',
+}
 
 export default function App() {
   const { lists, loading, save, remove } = useWordLists()
@@ -18,6 +26,20 @@ export default function App() {
     ? (lists.find((l) => l.id === selectedListId) ?? null)
     : null
 
+  // Move focus to the new screen after navigation so keyboard and screen
+  // reader users land at the top of the updated content. Skipped on the
+  // first render so the skip link stays the first tab stop.
+  const hasNavigated = useRef(false)
+
+  useEffect(() => {
+    if (loading) return
+    if (!hasNavigated.current) {
+      hasNavigated.current = true
+      return
+    }
+    document.getElementById('main-content')?.focus()
+  }, [view, loading])
+
   function navigate(next: View) {
     if ((next === 'practice' || next === 'test') && selectedList) {
       setActiveList(selectedList)
@@ -27,14 +49,25 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-indigo-50">
-        <p className="text-2xl font-bold text-indigo-600">Loading...</p>
+      <div role="status" className="flex min-h-screen items-center justify-center bg-indigo-50">
+        <p className="text-2xl font-bold text-indigo-800">Loading...</p>
       </div>
     )
   }
 
   return (
     <>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-xl focus:bg-white focus:px-5 focus:py-3 focus:text-lg focus:font-bold focus:text-indigo-900 focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
+
+      <div role="status" aria-live="polite" className="sr-only">
+        {VIEW_LABELS[view]}
+      </div>
+
       {view === 'home' && (
         <HomeView
           lists={lists}

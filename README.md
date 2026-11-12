@@ -24,6 +24,19 @@ Spelling practice app for young learners (~6 years old).
 - **Local-first** — All data stored in browser (IndexedDB), no account required
 - **Kid-friendly UI** — Large tap targets, minimal text, encouraging feedback, audio-first
 
+## Accessibility
+
+Spell targets WCAG 2.2 AA and is usable with a keyboard, switch access, or a screen reader.
+
+- **Keyboard only** — every flow works with Tab/Enter; a skip link jumps straight to `#main-content`; focus moves to the new screen after each navigation
+- **Screen readers** — `main` landmarks, labelled controls, `role="progressbar"` for progress, and persistent `role="status"` live regions so correct/incorrect feedback is announced
+- **Easy-read font** — the "Aa" toggle switches to self-hosted Atkinson Hyperlegible with wider letter and word spacing; the choice is remembered in `localStorage` (`spell:fontMode`)
+- **Contrast** — text and controls use 700/800-level Tailwind shades (`green-700`, `blue-700`, `purple-700`, `orange-700`, …) to stay at or above 4.5:1
+- **Tap targets** — interactive controls are at least 48×48px, with primary actions at 56–64px
+- **Motion** — animations collapse under `prefers-reduced-motion: reduce`; focus rings thicken under `prefers-contrast: more`
+
+Automated coverage lives in `e2e/a11y.spec.ts` (skip link, focus management, easy-read persistence, 48px targets) and `src/useFontMode.test.ts`.
+
 ## Getting started
 
 ```bash
@@ -96,22 +109,24 @@ spell/
 ├── scripts/
 │   └── spa-fallback.mjs # dist/index.html -> dist/404.html
 ├── src/
-│   ├── App.tsx          # Root component (view routing)
+│   ├── App.tsx          # Root component (view routing, skip link, focus)
 │   ├── main.tsx         # Entry point
-│   ├── index.css        # Tailwind imports
+│   ├── index.css        # Tailwind, focus/reduced-motion/easy-read styles
 │   ├── types.ts         # Domain types
 │   ├── db.ts            # Dexie (IndexedDB) + storage adapter
 │   ├── useWordLists.ts  # Word list CRUD hook
+│   ├── useFontMode.ts   # Easy-read font toggle (persisted)
 │   ├── HomeView.tsx     # Home screen
 │   ├── WordListManager.tsx  # Create/edit/delete word lists
 │   ├── PracticeView.tsx # Practice mode (TTS + feedback)
 │   ├── TestView.tsx     # Test mode (scored)
 │   ├── ResultsView.tsx  # Results + missed words
+│   ├── assets/fonts/    # Self-hosted Atkinson Hyperlegible (woff2)
 │   ├── hooks/
 │   │   └── useTTS.ts    # Web Speech API hook
 │   ├── test/setup.ts    # Test setup
 │   └── App.test.tsx     # Unit tests
-├── e2e/                 # Playwright E2E tests
+├── e2e/                 # Playwright E2E tests (incl. a11y.spec.ts)
 ├── Dockerfile           # Multi-stage container build (serve runtime)
 ├── vite.config.ts       # Vite + PWA + Tailwind (+ Pages base path)
 ├── vitest.config.ts     # Unit test config

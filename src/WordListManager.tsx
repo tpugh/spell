@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { WordList, View } from './types'
-import { createWordList, createWord } from './useWordLists'
+import { createWord, createWordList } from './useWordLists'
 
 interface WordListManagerProps {
   lists: WordList[]
@@ -9,7 +9,12 @@ interface WordListManagerProps {
   onNavigate: (view: View) => void
 }
 
-export default function WordListManager({ lists, onSave, onDelete, onNavigate }: WordListManagerProps) {
+export default function WordListManager({
+  lists,
+  onSave,
+  onDelete,
+  onNavigate,
+}: WordListManagerProps) {
   const [editing, setEditing] = useState<WordList | null>(null)
   const [newWordText, setNewWordText] = useState('')
 
@@ -23,11 +28,8 @@ export default function WordListManager({ lists, onSave, onDelete, onNavigate }:
 
   async function handleSave() {
     if (!editing) return
-    if (!editing.name.trim()) {
-      editing.name = 'My List'
-    }
-    if (editing.words.length === 0) return
-    await onSave(editing)
+    const name = editing.name.trim() || 'My List'
+    await onSave({ ...editing, name })
     setEditing(null)
   }
 
@@ -40,76 +42,114 @@ export default function WordListManager({ lists, onSave, onDelete, onNavigate }:
 
   function removeWord(wordId: string) {
     if (!editing) return
-    setEditing({ ...editing, words: editing.words.filter((w) => w.id !== wordId) })
+    setEditing({ ...editing, words: editing.words.filter((word) => word.id !== wordId) })
   }
 
   function updateWordText(wordId: string, text: string) {
     if (!editing) return
     setEditing({
       ...editing,
-      words: editing.words.map((w) => (w.id === wordId ? { ...w, text } : w)),
+      words: editing.words.map((word) => (word.id === wordId ? { ...word, text } : word)),
     })
+  }
+
+  async function handleDelete(list: WordList) {
+    const confirmed = window.confirm(`Delete the list “${list.name}”? This cannot be undone.`)
+    if (confirmed) await onDelete(list.id)
   }
 
   // --- Edit view ---
   if (editing) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-purple-100 to-pink-100 p-6">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="min-h-screen bg-gradient-to-b from-purple-100 to-pink-100 p-6"
+      >
         <div className="mx-auto max-w-lg">
           <button
-            className="mb-4 text-lg font-semibold text-purple-600 hover:text-purple-800"
+            type="button"
+            className="mb-4 min-h-12 rounded-lg px-3 py-2 text-lg font-semibold text-purple-800 hover:bg-purple-200"
             onClick={() => setEditing(null)}
           >
-            ← Back
+            <span aria-hidden="true">← </span>Back
           </button>
 
-          <h2 className="mb-4 text-3xl font-bold text-purple-700">
+          <h1 className="mb-4 text-3xl font-bold text-purple-900">
             {editing.createdAt === editing.updatedAt ? 'New List' : 'Edit List'}
-          </h2>
+          </h1>
 
+          <label htmlFor="list-name" className="mb-1 block text-sm font-semibold text-gray-700">
+            List name
+          </label>
           <input
-            className="mb-4 w-full rounded-xl border-2 border-purple-200 px-4 py-3 text-xl font-medium focus:border-purple-400 focus:outline-none"
-            placeholder="List name (e.g. Week 5)"
+            id="list-name"
+            className="mb-4 w-full rounded-xl border-2 border-purple-400 px-4 py-3 text-xl font-medium placeholder:text-gray-500"
+            placeholder="e.g. Week 5"
             value={editing.name}
-            onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+            onChange={(event) => setEditing({ ...editing, name: event.target.value })}
           />
 
-          {/* Add word */}
+          <label htmlFor="new-word" className="mb-1 block text-sm font-semibold text-gray-700">
+            Add a word
+          </label>
           <div className="mb-4 flex gap-2">
             <input
-              className="flex-1 rounded-xl border-2 border-purple-200 px-4 py-3 text-lg focus:border-purple-400 focus:outline-none"
+              id="new-word"
+              className="min-w-0 flex-1 rounded-xl border-2 border-purple-400 px-4 py-3 text-lg placeholder:text-gray-500"
               placeholder="Type a word..."
               value={newWordText}
-              onChange={(e) => setNewWordText(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addWord()}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              onChange={(event) => setNewWordText(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  addWord()
+                }
+              }}
             />
             <button
-              className="rounded-xl bg-purple-500 px-6 py-3 text-lg font-bold text-white hover:bg-purple-600 active:scale-95"
+              type="button"
+              className="min-h-12 rounded-xl bg-purple-700 px-6 py-3 text-lg font-bold text-white hover:bg-purple-800 active:scale-95"
               onClick={addWord}
             >
               Add
             </button>
           </div>
 
-          {/* Word list */}
+          <h2 className="mb-2 text-lg font-semibold text-purple-900">
+            Words ({editing.words.length})
+          </h2>
           <div className="mb-6 max-h-64 overflow-y-auto rounded-xl bg-white p-4 shadow-inner">
             {editing.words.length === 0 ? (
-              <p className="text-center text-gray-400">No words yet. Add some above!</p>
+              <p className="text-center text-gray-700">No words yet. Add some above!</p>
             ) : (
               <ul className="space-y-2">
-                {editing.words.map((word) => (
+                {editing.words.map((word, index) => (
                   <li key={word.id} className="flex items-center gap-2">
+                    <label htmlFor={`word-${word.id}`} className="sr-only">
+                      Word {index + 1}
+                    </label>
                     <input
-                      className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-lg focus:border-purple-300 focus:outline-none"
+                      id={`word-${word.id}`}
+                      className="min-w-0 flex-1 rounded-lg border border-gray-400 px-3 py-2 text-lg"
                       value={word.text}
-                      onChange={(e) => updateWordText(word.id, e.target.value)}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      onChange={(event) => updateWordText(word.id, event.target.value)}
                     />
                     <button
-                      className="rounded-lg bg-red-100 px-3 py-2 text-red-500 hover:bg-red-200"
+                      type="button"
+                      className="min-h-12 min-w-12 rounded-lg bg-red-100 px-3 py-2 text-lg text-red-800 hover:bg-red-200"
                       onClick={() => removeWord(word.id)}
-                      aria-label="Remove word"
+                      aria-label={`Remove ${word.text || `word ${index + 1}`}`}
                     >
-                      ✕
+                      <span aria-hidden="true">✕</span>
                     </button>
                   </li>
                 ))}
@@ -118,60 +158,74 @@ export default function WordListManager({ lists, onSave, onDelete, onNavigate }:
           </div>
 
           <button
-            className="w-full rounded-2xl bg-green-500 py-4 text-xl font-bold text-white shadow-lg hover:bg-green-600 active:scale-95 disabled:opacity-40"
+            type="button"
+            className="min-h-14 w-full rounded-2xl bg-green-700 py-4 text-xl font-bold text-white shadow-lg hover:bg-green-800 active:scale-95 disabled:opacity-50"
             disabled={editing.words.length === 0}
             onClick={handleSave}
           >
             Save List ({editing.words.length} words)
           </button>
+          {editing.words.length === 0 && (
+            <p className="mt-2 text-center text-gray-700">Add at least one word to save.</p>
+          )}
         </div>
-      </div>
+      </main>
     )
   }
 
   // --- List view ---
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-100 to-pink-100 p-6">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="min-h-screen bg-gradient-to-b from-purple-100 to-pink-100 p-6"
+    >
       <div className="mx-auto max-w-lg">
         <button
-          className="mb-4 text-lg font-semibold text-purple-600 hover:text-purple-800"
+          type="button"
+          className="mb-4 min-h-12 rounded-lg px-3 py-2 text-lg font-semibold text-purple-800 hover:bg-purple-200"
           onClick={() => onNavigate('home')}
         >
-          ← Home
+          <span aria-hidden="true">← </span>Home
         </button>
 
-        <h2 className="mb-6 text-3xl font-bold text-purple-700">Word Lists</h2>
+        <h1 className="mb-6 text-3xl font-bold text-purple-900">Word Lists</h1>
 
         <button
-          className="mb-6 w-full rounded-2xl bg-green-500 py-4 text-xl font-bold text-white shadow-lg hover:bg-green-600 active:scale-95"
+          type="button"
+          className="mb-6 min-h-14 w-full rounded-2xl bg-green-700 py-4 text-xl font-bold text-white shadow-lg hover:bg-green-800 active:scale-95"
           onClick={startNew}
         >
           + New List
         </button>
 
         {lists.length === 0 ? (
-          <p className="text-center text-gray-400">No lists yet. Create your first one!</p>
+          <p className="text-center text-gray-700">No lists yet. Create your first one!</p>
         ) : (
           <ul className="space-y-3">
             {lists.map((list) => (
               <li
                 key={list.id}
-                className="flex items-center justify-between rounded-xl bg-white p-4 shadow-md"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-4 shadow-md"
               >
                 <div>
-                  <p className="text-xl font-bold text-gray-800">{list.name}</p>
-                  <p className="text-sm text-gray-500">{list.words.length} words</p>
+                  <p className="text-xl font-bold text-gray-900">{list.name}</p>
+                  <p className="text-sm text-gray-700">{list.words.length} words</p>
                 </div>
                 <div className="flex gap-2">
                   <button
-                    className="rounded-lg bg-purple-100 px-4 py-2 font-semibold text-purple-600 hover:bg-purple-200"
+                    type="button"
+                    className="min-h-12 rounded-lg bg-purple-100 px-4 py-2 font-semibold text-purple-800 hover:bg-purple-200"
                     onClick={() => startEdit(list)}
+                    aria-label={`Edit ${list.name}`}
                   >
                     Edit
                   </button>
                   <button
-                    className="rounded-lg bg-red-100 px-4 py-2 font-semibold text-red-500 hover:bg-red-200"
-                    onClick={() => onDelete(list.id)}
+                    type="button"
+                    className="min-h-12 rounded-lg bg-red-100 px-4 py-2 font-semibold text-red-800 hover:bg-red-200"
+                    onClick={() => handleDelete(list)}
+                    aria-label={`Delete ${list.name}`}
                   >
                     Delete
                   </button>
@@ -181,6 +235,6 @@ export default function WordListManager({ lists, onSave, onDelete, onNavigate }:
           </ul>
         )}
       </div>
-    </div>
+    </main>
   )
 }
